@@ -1,0 +1,40 @@
+---
+title: "Faulkner and punctuation"
+author: "Johannes Burgers"
+format: html
+editor: visual
+---
+
+## Introduction
+
+There is a lot to say about Faulkner and punctuation.
+
+In this pieces I will argue: Faulkner pushes the very definition of a sentence in order to demonstrate the continuity of time. Yet, how he experiments with punctuation to achieve this end changes? throughout his career.
+
+## Critical literature on Faulkner
+
+
+## Methodology and Editing Faulkner
+
+
+## Computation
+
+```{r packages}
+library(tidyverse)
+
+```
+
+```{r load_data}
+all_works <-
+  list.files(path = "./data/", pattern = "*.txt") %>% #grab a list of all the files with .txt extension
+  map_df(~ data_frame(  #the map function performs the same command on all parts of the data set. In this case the .txt files
+    text = read_file("./data/"), #read the files
+    date = ifelse(
+      str_detect(basename(.), "[:digit:]{4}") == TRUE,
+      str_extract(basename(.), "[:digit:]{4}"),
+      NA
+    ) #see if there is a date in yyyy format, i.e. 1987, and extract the date, if it can't find date NA
+  )) 
+
+```
+
