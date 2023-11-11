@@ -13,28 +13,79 @@ In this pieces I will argue: Faulkner pushes the very definition of a sentence i
 
 ## Critical literature on Faulkner
 
-
 ## Methodology and Editing Faulkner
-
 
 ## Computation
 
 ```{r packages}
 library(tidyverse)
-
+library(tidytext)
 ```
 
 ```{r load_data}
 all_works <-
-  list.files(path = "./data/", pattern = "*.txt") %>% #grab a list of all the files with .txt extension
-  map_df(~ data_frame(  #the map function performs the same command on all parts of the data set. In this case the .txt files
-    text = read_file("./data/"), #read the files
+  list.files(file.path("data"), full.names = TRUE, pattern = "*.txt") %>% #grab a list of all the files with .txt extension
+  #the full.names value needs to set to TRUE to get the full path. For some reason you will get a "permission denied" error if you do not do this.
+  map_df(~ tibble(  #the map function performs the same command on all parts of the data set. In this case the .txt files
+    text = read_file(.), #read the files
     date = ifelse(
       str_detect(basename(.), "[:digit:]{4}") == TRUE,
       str_extract(basename(.), "[:digit:]{4}"),
-      NA
-    ) #see if there is a date in yyyy format, i.e. 1987, and extract the date, if it can't find date NA
+      NA), #see if there is a date in yyyy format, i.e. 1987, and extract the date, if it can't find date NA
+    title=str_extract(basename(.), "(?<=_)[:alpha:]*")
+    
   )) 
 
 ```
+
+```{r}
+all_works_clean <- all_works %>% 
+                    mutate(text = gsub("[,\\!\\?\\.](?=[^’‘]*’[\\s—-])"," ",text, perl=TRUE))
+                    
+
+```
+
+
+```{r clean_works}
+clean_works <- all_works_length %>% 
+ mutate(work_length = str_count(text, "\\S+")) %>% 
+                    mutate(type = ifelse(work_length>40000,"novel","short_story")) %>% 
+  group_by(title) %>% 
+    unnest_regex(sentence, text, "[.?!]") %>%
+  mutate (string_length = str_count(sentence, "\\S+"))    
+  
+  # unnest_tokens(output = text, input = text, token = "sentences", to_lower = FALSE)  %>% 
+  #  mutate(word_count = str_count(text ,"\\S+") ) %>% 
+  #  summarise(Mean = mean(word_count))
+```
+
+
+```{r punctuation}
+works_punctuation <- clean_works %>% 
+  mutate(comma = str_count(sentence, "\\," )) %>% 
+  mutate(semi_colon = str_count(sentence, "\\;")) %>% 
+  mutate(colon = str_count(sentence, "\\:")) %>% 
+  mutate(parenthesis = str_count(sentence, "[\\(\\)]")) %>% 
+  mutate(pauses = comma+semi_colon +colon+parenthesis)
+
+```
+
+
+```{r}
+clean_summary <- works_punctuation %>% 
+  group_by(title,date) %>% 
+  summarize(across(string_length:pauses,~ mean(.x)))
+
+
+
+```
+
+
+
+### Notes
+
+Consider the long sentence and the flow of history. Who gets to be part of that history? How do we suture folks back into their histories. Who is embedded in these long sentences? Is it Quentin? Is it Stevens?
+
+I can correlate sentence length to character demographics per text weighted frequency of character demographics. That is to say, does the sentence length increase when there are more upper class white characters? 
+
 
