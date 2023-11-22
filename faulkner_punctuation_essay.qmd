@@ -20,6 +20,15 @@ In this pieces I will argue: Faulkner pushes the very definition of a sentence i
 ```{r packages}
 library(tidyverse)
 library(tidytext)
+library(qdapRegex )
+library(psych)
+library(EnvStats)
+library(ggpubr)
+library(isotree)
+library(broom)
+library(AICcmodavg)
+library(cluster)    # clustering algorithms
+library(factoextra)
 ```
 
 ```{r load_data}
@@ -32,51 +41,435 @@ all_works <-
       str_detect(basename(.), "[:digit:]{4}") == TRUE,
       str_extract(basename(.), "[:digit:]{4}"),
       NA), #see if there is a date in yyyy format, i.e. 1987, and extract the date, if it can't find date NA
-    title=str_extract(basename(.), "(?<=_)[:alpha:]*")
-    
+    title=str_extract(basename(.), "(?<=_)[:alpha:]*"),
+    code=str_extract(basename(.), "[:upper:]+")
   )) 
 
 ```
 
-```{r}
-all_works_clean <- all_works %>% 
-                    mutate(text = gsub("[,\\!\\?\\.](?=[^’‘]*’[\\s—-])"," ",text, perl=TRUE))
-                    
+```{r normalize_punctuation}
+#This helps normalize how quote marks are used in the text.
+
+all_works_clean <- all_works %>%
+  mutate(text = gsub("[,\\!\\?\\.](?=[^’‘]*’[\\s—-])", " ", text, perl =
+                       TRUE))
+```
+
+```{r export_CSV}
+#saved version of the preprocessing to help improve spead on repeat runs.
+
+write_csv(all_works_clean, "processed_data/all_works_clean.csv")
+```
+
+```{r import_CSV}
+#import saved version of text.
+
+all_works_clean_import <- read_csv("processed_data/all_works_clean.csv", show_col_types = FALSE)
+```
+
+```{r remove_abbreviations}
+# Because all strings are unnested on the end of sentence period, periods that appear before that moment have to be removed. These include periods in standard abbreviations (i.e. F.B.I.), common titles (Mr./Mrs.), and ellipses (... or . . . ). 
+
+all_works_noabbreviation <- all_works_clean_import %>%
+  mutate(cleaned = rm_abbreviation(text, replacement = "abbreviationremoved")) %>%
+  mutate(cleaned = str_replace_all(cleaned, "Mr\\.", "Mr")) %>%
+  mutate(cleaned = str_replace_all(cleaned, "Mrs\\.", "Mrs")) %>%
+  mutate(cleaned = str_replace_all (cleaned, "\\.\\.\\.", "punctellipse")) %>%
+  mutate(cleaned = str_replace_all (cleaned, "\\.\\s\\.\\s\\.\\s", "punctellipse"))
+```
+
+```{r create_text_types}
+#Work types (short_story or novel) can be created by labeling everything shorter than the shortest novel As I Lay Dying (50k words) as a short story.
+
+all_works_noabbreviation_type <- all_works_noabbreviation %>%
+  mutate(work_length = str_count(cleaned, "\\S+")) %>%
+  mutate(type = ifelse(work_length > 40000, "novel", "short_story"))
 
 ```
 
 
-```{r clean_works}
-clean_works <- all_works_length %>% 
- mutate(work_length = str_count(text, "\\S+")) %>% 
-                    mutate(type = ifelse(work_length>40000,"novel","short_story")) %>% 
-  group_by(title) %>% 
-    unnest_regex(sentence, text, "[.?!]") %>%
-  mutate (string_length = str_count(sentence, "\\S+"))    
+```{r unnest_sentences}
+#Create sentences using regex unnest. This works better than unnest_sentences in tidytext library, which drops all columns.
+
+works_length_noabbreviation <- all_works_noabbreviation_type %>%
+  group_by(title, date, code, type) %>%
+  unnest_regex(sentence, cleaned, "[.?!]") %>%
   
-  # unnest_tokens(output = text, input = text, token = "sentences", to_lower = FALSE)  %>% 
-  #  mutate(word_count = str_count(text ,"\\S+") ) %>% 
-  #  summarise(Mean = mean(word_count))
+  mutate (string_length = str_count(sentence, "\\S+")) %>%
+  mutate(ellipse = str_count(sentence, "punctellipse")/string_length)  %>%
+  filter(string_length > 0)
 ```
 
+```{r count_pauses}
 
-```{r punctuation}
-works_punctuation <- clean_works %>% 
-  mutate(comma = str_count(sentence, "\\," )) %>% 
-  mutate(semi_colon = str_count(sentence, "\\;")) %>% 
-  mutate(colon = str_count(sentence, "\\:")) %>% 
-  mutate(parenthesis = str_count(sentence, "[\\(\\)]")) %>% 
-  mutate(pauses = comma+semi_colon +colon+parenthesis)
+#Counts the average pauses in a work. This is used to find works with unusually high numbers of a particular type of punctuation.
+
+works_punctuation_abbreviation <- works_length_noabbreviation %>%
+  mutate(comma = str_count(sentence, "\\,")/string_length) %>%
+  mutate(semi_colon = str_count(sentence, "\\;")/string_length) %>%
+  mutate(dash = str_count(sentence, "[\u2013\u2014]")/string_length) %>%
+  mutate(colon = str_count(sentence, "\\:")/string_length) %>%
+  mutate(parenthesis = str_count(sentence, "[\\(\\)]")/string_length) 
+
 
 ```
 
 
 ```{r}
-clean_summary <- works_punctuation %>% 
-  group_by(title,date) %>% 
-  summarize(across(string_length:pauses,~ mean(.x)))
+summary_punctuation <- works_punctuation_abbreviation %>% 
+                        group_by(title,date, code,type) %>% 
+                        summarise(across(string_length:parenthesis, ~mean(.x)))
+```
+```{r}
+summary_by_type <- works_punctuation_abbreviation %>% 
+                        group_by(type) %>% 
+                        summarise(across(string_length:parenthesis, ~mean(.x)))
+```
+
+```{r}
+summary_by_date <- works_punctuation_abbreviation %>% 
+                    group_by(date) %>% 
+                        summarise(across(string_length:parenthesis, ~mean(.x)))
+```
 
 
+```{r}
+summary_punctuation %>% 
+ggplot() + 
+  geom_histogram(mapping = aes(x = string_length), fill="steelblue", colour="black") +
+  ggtitle("String Distribution")
+
+
+```
+
+
+```{r}
+summary_punctuation %>% 
+ggplot() + 
+  geom_histogram(mapping = aes(x = colon), fill="steelblue", colour="black") +
+  ggtitle("Colon")
+
+```
+
+```{r}
+summary_punctuation %>% 
+ggplot() + 
+  geom_histogram(mapping = aes(x = semi_colon), fill="steelblue", colour="black") +
+  ggtitle("Semi-Colon")
+
+```
+```{r}
+summary_punctuation %>% 
+ggplot() + 
+  geom_histogram(mapping = aes(x = parenthesis), fill="steelblue", colour="black") +
+  ggtitle("Colon")
+```
+
+```{r}
+pauses <- summary_punctuation %>% 
+          ungroup() %>% 
+          mutate(across(c(ellipse:parenthesis), ~log1p(.x))) %>% 
+          select(ellipse:parenthesis)
+
+
+```
+
+```{r}
+ggplot(gather(pauses),  aes(x=key, y=value)) + geom_boxplot(aes(fill=key))
+```
+
+
+Do Rosner's test to detect outliers, do it without scaling
+
+```{r}
+
+shapiro.test(log1p(summary_punctuation$colon))
+ggqqplot(log1p(summary_punctuation$colon))
+
+colon_outlier <- boxplot.stats(log1p(summary_punctuation$colon))$out
+colon_outlier_rownumbers <- which(log1p(summary_punctuation$colon) %in% c(colon_outlier))
+
+colon_test <- rosnerTest(log1p(summary_punctuation$colon),
+  k = length(colon_outlier_rownumbers)
+)
+colon_outlier_obs <-  colon_test$all.stats %>% 
+                       filter(Outlier ==TRUE) %>% 
+                       select(Obs.Num)
+
+colon_outlier_result <- summary_punctuation[colon_outlier_obs$Obs.Num,]
+                       
+```
+
+```{r}
+shapiro.test(summary_punctuation$dash)
+ggqqplot(summary_punctuation$dash)
+
+dash_outlier <- boxplot.stats(log1p(summary_punctuation$dash))$out
+dash_outlier_rownumbers <- which(log1p(summary_punctuation$dash) %in% c(dash_outlier))
+
+dash_test <- rosnerTest(log1p(summary_punctuation$dash),
+  k = length(dash_outlier_rownumbers)
+)
+dash_outlier_obs <-  dash_test$all.stats %>% 
+                       filter(Outlier ==TRUE) %>% 
+                       select(Obs.Num)
+
+dash_outlier_result <- summary_punctuation[dash_outlier_obs$Obs.Num,]
+
+dash_boxplot_outliers <- summary_punctuation[dash_outlier_rownumbers,]                       
+```
+
+
+```{r}
+shapiro.test(summary_punctuation$semi_colon)
+ggqqplot(log1p(summary_punctuation$semi_colon))
+
+semi_colon_outlier <- boxplot.stats(log1p(summary_punctuation$semi_colon))$out
+semi_colon_outlier_rownumbers <- which(log1p(summary_punctuation$semi_colon) %in% c(semi_colon_outlier))
+
+
+semi_colon_test <- rosnerTest(log1p(summary_punctuation$semi_colon),
+  k = length(semi_colon_outlier_rownumbers)
+)
+semi_colon_outlier_obs <-  semi_colon_test$all.stats %>% 
+                       filter(Outlier ==TRUE) %>% 
+                       select(Obs.Num)
+
+semi_colon_outlier_result <- summary_punctuation[semi_colon_outlier_obs$Obs.Num,]
+
+```
+
+
+```{r}
+shapiro.test(log(summary_punctuation$ellipse))
+ggqqplot(log1p(summary_punctuation$ellipse))
+
+
+ellipse_outlier <- boxplot.stats(log1p(summary_punctuation$ellipse))$out
+ellipse_outlier_rownumbers <- which(log1p(summary_punctuation$ellipse) %in% c(ellipse_outlier))
+
+
+ellipse_test <- rosnerTest(log1p(summary_punctuation$ellipse),
+  k = length(ellipse_outlier_rownumbers)
+)
+ellipse_outlier_obs <-  ellipse_test$all.stats %>% 
+                       filter(Outlier ==TRUE) %>% 
+                       select(Obs.Num)
+
+ellipse_outlier_result <- summary_punctuation[ellipse_outlier_obs$Obs.Num,]
+```
+
+
+```{r}
+
+shapiro.test(log1p(summary_punctuation$parenthesis))
+ggqqplot(log1p(summary_punctuation$parenthesis))
+
+parenthesis_outlier <- boxplot.stats(log1p(summary_punctuation$parenthesis))$out
+parenthesis_outlier_rownumbers <- which(log1p(summary_punctuation$parenthesis) %in% c(parenthesis_outlier))
+
+
+parenthesis_test <- rosnerTest(log1p(summary_punctuation$parenthesis),
+  k = length(parenthesis_outlier_rownumbers)
+)
+parenthesis_outlier_obs <-  parenthesis_test$all.stats %>% 
+                       filter(Outlier ==TRUE) %>% 
+                       select(Obs.Num)
+
+parenthesis_outlier_result <- summary_punctuation[parenthesis_outlier_obs$Obs.Num,]
+```
+
+```{r}
+comma_outlier <- boxplot.stats(summary_punctuation$comma)$out
+comma_outlier_rownumbers <- which(summary_punctuation$comma %in% c(comma_outlier))
+
+
+comma_test <- rosnerTest(summary_punctuation$comma,
+  k = length(comma_outlier_rownumbers)
+)
+comma_outlier_obs <-  comma_test$all.stats %>% 
+                       filter(Outlier ==TRUE) %>% 
+                       select(Obs.Num)
+
+comma_outlier_result <- summary_punctuation[comma_outlier_obs$Obs.Num,]
+```
+
+## The Extending the Sentences: Pauses and Such
+
+Sentence length is a crude tool for understanding how Faulker was trying to capture the long sentence. After all, it indicates where they begin and end, but not what is happening in them. Here too it is useful to turn to computational techniques to understand the linguistic patterns as a whole. While sentence length can be calculated by measuring the distance between the first capital letter and full-stop, it is possible to get a sense of how the sentence diverts, tarries, and pauses by looking at punctuation like: colons, semi-colons, and parenthesis. Faulkner is not merely making sentences very long, but using thus punctuation to extend the meaning of the sentence, and in turn call attention to the punctuation itself. By calling attention to the punctuation it becomes clear that the flow of time is interrupted. There are three salient examples. Mosquitos, Absalom, and Intruder in the Dust. Another example is requiem for a nun, but as that is written as a play, in part, the punctuation stands out in any case.
+
+Procedure
+
+For each of the texts the number of occurrence of mid-sentence punctuation per sentence were counted. Specifically, I counted commas, semi-colons, colons, dashes, and parentheses. This creates a statistical picture of how often Faulkner is separating different thoughts in his sentences. Since punctuation follows discernible rules, it makes sense that he distribution of punctuation marks is right-skewed; it has a long tail to the right. That is, it is very likely that given sentence length x that there are n-number of mid-sentence punctuation marks, it is far less likely that there are more than n and impossible for there to be negative puncuation marks. The odds of there being more than n drop precipitiously because that would mean violating the basic rules of grammar. It is these violations that are interesting. There are several statistical methods for detecting these rule breakers. They all rely on some measure of interpretation. In the hard sciences an outlier is usually described as something that inordinately skews the data a broken pipette or someone who did not properly understand the questionarie. The rules of grammar are different. 
+
+```{r}
+testvector <- as.data.frame(summary_punctuation$colon)
+
+model <- isolation.forest(testvector, ndim=1, ntrees=10, nthreads=1)
+scores <- predict(model, summary_punctuation$colon, type="avg_depth")
+par(mar = c(4,5,3,2))
+plot(testvector, scores, type="p", col="darkred",
+     main="Average isolation depth\nfor normally-distributed numbers",
+     xlab="value", ylab="Average isolation depth")
+```
+
+
+
+```{r}
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+## Import Demographics
+
+```{r}
+#demographic data goes here. Read in file then come up with a measure of class. % upper class men present.
+
+demographic <- read_csv("processed_data/dy_database_flattened_2023_6_29.csv")
+```
+
+```{r}
+short_demographic <- demographic %>% 
+                      select(SourceTextTitle,SourceTextCode,PageNumber,Nid,PresentMentioned,Race,Gender,Class,Rank) %>%  
+                      filter(PresentMentioned=="Present")
+                      
+```
+
+```{r}
+race_demographic <- short_demographic %>% 
+  group_by(SourceTextCode,Nid) %>% 
+                      pivot_wider(id_cols = c(SourceTextCode,PageNumber,Nid), names_from = Race, values_from = Gender, values_fn = list(Gender=length), names_prefix = "race_")  
+          
+  
+
+
+
+```
+
+```{r}
+race_demographic_summary <- race_demographic %>% 
+                            group_by(SourceTextCode) %>% 
+                              summarise(across(starts_with("race_"), ~ sum(.x, na.rm = TRUE))) %>% 
+                              group_by(SourceTextCode) %>% 
+  mutate(total = sum(c_across(starts_with("race_")), na.rm = TRUE)) %>% 
+    mutate(white_percent = race_White/total)
+
+```
+
+```{r}
+class_demographic <- short_demographic %>% 
+  group_by(SourceTextCode,Nid) %>% 
+                      pivot_wider(id_cols = c(SourceTextCode,PageNumber,Nid), names_from = Class, values_from = Gender, values_fn = list(Gender=length), names_prefix = "class_") %>% 
+  rename_with(~ tolower(gsub(" ", "_", .x, fixed = TRUE)))
+            
+```
+
+```{r}
+class_demographic_summary <- class_demographic %>% 
+                            group_by(sourcetextcode) %>% 
+                              summarise(across(starts_with("class_"), ~ sum(.x, na.rm = TRUE))) %>% 
+                              group_by(sourcetextcode) %>% 
+  mutate(total = sum(c_across(starts_with("class_")), na.rm = TRUE)) %>% 
+    mutate(upper_percent = class_upper_class/total)
+```
+
+```{r}
+gender_demographic <- short_demographic %>% 
+  group_by(SourceTextCode,Nid) %>% 
+                      pivot_wider(id_cols = c(SourceTextCode,PageNumber,Nid), names_from = Gender, values_from = Class, values_fn = list(Class=length), names_prefix = "gender_") %>% 
+  rename_with(~ tolower(gsub(" ", "_", .x, fixed = TRUE)))
+
+```
+
+```{r}
+gender_demographic_summary <- gender_demographic %>% 
+                            group_by(sourcetextcode) %>% 
+                              summarise(across(starts_with("gender_"), ~ sum(.x, na.rm = TRUE))) %>% 
+                              group_by(sourcetextcode) %>% 
+  mutate(total = sum(c_across(starts_with("gender_")), na.rm = TRUE)) %>% 
+    mutate(male_percent = gender_male/total)
+```
+
+```{r}
+demographics_punctuation <- clean_summary_abbreviation %>% 
+                            inner_join(select(race_demographic_summary, SourceTextCode, white_percent),   by = join_by(code==SourceTextCode)) %>% 
+                           inner_join(select(class_demographic_summary, sourcetextcode, upper_percent),   by = join_by(code==sourcetextcode)) %>% 
+                            inner_join(select(gender_demographic_summary, sourcetextcode, male_percent),   by = join_by(code==sourcetextcode))
+```
+
+```{r}
+#correlations
+
+correlations_string_length <- demographics_punctuation %>% 
+                              filter(type=="novel") %>% 
+                               ungroup() %>% 
+                               summarise(across(where((is.numeric)),~ cor(.x,string_length, method="pearson")))
+
+
+```
+
+```{r}
+demographics_punctuation %>% 
+ggplot(aes(date, string_length)) +
+  geom_line()
+
+
+```
+
+```{r}
+raceclassgender_demographic <- short_demographic %>% 
+                               mutate(race_class_gender = paste(Race,Class,Gender,sep="_")) %>% 
+                              mutate(race_class_gender = tolower(str_replace_all(race_class_gender," ","_"))) %>% 
+                               group_by(SourceTextCode,Nid) %>% 
+                      pivot_wider(id_cols = c(SourceTextCode,PageNumber,Nid), names_from = race_class_gender, values_from = Gender, values_fn = list(Gender=length), names_prefix = "all_") %>% 
+  rename_with(~ tolower(gsub(" ", "_", .x, fixed = TRUE))) %>% 
+  ungroup()
+                              
+```
+
+```{r}
+
+raceclassgender_demographic_summary <- raceclassgender_demographic %>% 
+                                        group_by(sourcetextcode) %>% 
+                                        summarise(across(starts_with("all_"), ~ sum(.x, na.rm = TRUE))) %>% 
+  group_by(sourcetextcode) %>% 
+  mutate(total = sum(c_across(starts_with("all_")), na.rm = TRUE)) %>% 
+  mutate(across(where(is.numeric),~ ./total), .names = "{.col}_percent")
+
+```
+
+```{r}
+demographics_punctuation_raceclassgender <- clean_summary_abbreviation %>% 
+                                              inner_join(raceclassgender_demographic_summary,join_by(code==sourcetextcode))
+            
+```
+
+```{r}
+correlations_string_length_rcg <- demographics_punctuation_raceclassgender %>% 
+                               filter(type=="novel") %>% 
+                              ungroup() %>% 
+                              summarise(across(where((is.numeric)),~ cor(.x,string_length, method="pearson"))) %>% 
+                              pivot_longer(starts_with("all_"), names_to = "types") %>% 
+                              filter(value>.2 | value < -.2)
+```
+
+```{r}
+key_demographics <- demographics_punctuation_raceclassgender %>% 
+                  filter(type=="novel") %>% 
+                    select(string_length, any_of(correlations_string_length_rcg$types))
 
 ```
 
@@ -86,6 +479,10 @@ clean_summary <- works_punctuation %>%
 
 Consider the long sentence and the flow of history. Who gets to be part of that history? How do we suture folks back into their histories. Who is embedded in these long sentences? Is it Quentin? Is it Stevens?
 
-I can correlate sentence length to character demographics per text weighted frequency of character demographics. That is to say, does the sentence length increase when there are more upper class white characters? 
+I can correlate sentence length to character demographics per text weighted frequency of character demographics. That is to say, does the sentence length increase when there are more upper class white characters?
 
+I have a pretty decently cleaned up version of the numbers. Should go through the sentences again to see if there's any major regex errors.
 
+There do not appear to be any strong correlations between sentence length and the racial composition of the character. This effect might appear stronger when combined.
+
+No correlations with race class gender either
