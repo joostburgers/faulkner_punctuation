@@ -6,6 +6,7 @@ editor: visual
 ---
 
 ## Precursors
+
 ```{r packages}
 library(tidyverse)
 library(tidytext)
@@ -22,12 +23,11 @@ library(robustbase)
 library(univOutl)
 ```
 
-
 ## Introduction
 
 There is a lot to say about Faulkner and punctuation.
 
-In this pieces I will argue: Faulkner pushes the very definition of a sentence in order to demonstrate the continuity of time. Yet, how he experiments with punctuation to achieve this end changes? throughout his career.
+In this pieces I will argue: Faulkner pushes the very definition of a sentence in order to demonstrate the continuity of time. Yet, how he experiments with punctuation to achieve this end changes throughout his career. What's more, the philosophy of the long sentence appears to only have salience for some of his fiction and not all of it.
 
 ## Critical literature on Faulkner
 
@@ -35,12 +35,12 @@ In this pieces I will argue: Faulkner pushes the very definition of a sentence i
 
 ### Corpus Description
 
-Faulkner's corpus is quite heterogeneous, and consists of novels, short stories, poetry, film scripts, and a text that hovers between a stage play and a novel: Requiem for a Nun. Even within these broad categories there are further subdivisions. Speaking of the novels and short-stories more narrowly, there are the 14 novels and 68 short-stories that take place in his famous Yoknapatawpha County. Among these are "uncollected" short stories that were only ever published in magazines and then incorporated wholesale or in part into novels such as *The Unvanquished*, *The Hamlet*, and *Go Down, Moses*. There is also a further set of unpublished stories that are interesting in their own right or that have resonances with Faulkner's more well-known published work. This leads to a rich body of work makes for a poor experimental design. Using computational techniques to analyze texts works best when detecting patterns and exceptions to those patterns. When a corpus is heterogeneous with many unique texts, it is harder to detect a pattern when everything appears to be an exception. While it is possible to make certain generalizations about Faulkner's writing, these observations across the entire corpus are not very meaningful. For example, Faulkner writes longer sentences than other authors `r round(mean(summary_punctuation$string_length),0)`, but this number varies quite widely from an entirely average x words per sentence to works that are exceptionally verbose. Suffice to say that the data has been sliced up to properly compare works that have some sort of underlying similarity.
-
+Faulkner's corpus is quite heterogeneous, and consists of novels, short stories, poetry, film scripts, and a text that hovers between a stage play and a novel: *Requiem for a Nun*. Even within these broad categories there are further subdivisions. Speaking of the novels and short-stories more narrowly, there are the 14 novels and 68 short-stories that take place in his famous Yoknapatawpha County. Among these are "uncollected" short stories that were only ever published in magazines and then incorporated wholesale or in part into novels such as *The Unvanquished*, *The Hamlet*, and *Go Down, Moses*. There is also a further set of unpublished stories that are interesting in their own right or that have resonances with Faulkner's more well-known published work. This leads to a rich body of work that makes for a poor experimental design. Using computational techniques to analyze texts works best when detecting patterns and exceptions to those patterns within a particular domain. When a corpus is heterogeneous with many unique texts, it is harder to detect a pattern when everything appears to be an exception. While it is possible to make certain generalizations about Faulkner's writing, these observations across the entire corpus are not very meaningful. For example, Faulkner writes longer sentences than other authors `r round(mean(summary_punctuation$string_length),0)`, but this number varies quite widely from an entirely average x words per sentence to works that are exceptionally verbose. Suffice to say that the data has been sliced up to properly compare works that have some sort of underlying similarity.
 
 ## Computation
 
 ### Preprocess Data
+
 ```{r load_data }
 #| include: false
 
@@ -60,6 +60,23 @@ all_works <-
 
 ```
 
+```{r}
+secondary_works <- list.files(file.path("secondary_authors"), full.names = TRUE, pattern = "*.txt") %>% #grab a list of all the files with .txt extension
+  #the full.names value needs to set to TRUE to get the full path. For some reason you will get a "permission denied" error if you do not do this.
+  map_df(~ tibble(  #the map function performs the same command on all parts of the data set. In this case the .txt files
+    text = read_file(.), #read the files
+    date = ifelse(
+      str_detect(basename(.), "[:digit:]{4}") == TRUE,
+      str_extract(basename(.), "[:digit:]{4}"),
+      NA), #see if there is a date in yyyy format, i.e. 1987, and extract the date, if it can't find date NA
+    title=str_extract(basename(.), "(?<=_)[:alpha:]*"),
+    code=str_extract(basename(.), "[:upper:]+"),
+    revised = str_detect(basename(.),"_revised")
+  )) 
+```
+
+
+
 ```{r normalize_punctuation}
 #| include: false
 
@@ -69,6 +86,14 @@ all_works_clean <- all_works %>%
   mutate(text = gsub("[,\\!\\?\\.](?=[^’‘]*’[\\s—-])", " ", text, perl =
                        TRUE))
 ```
+
+
+```{r}
+secondary_works_clean <- secondary_works %>%
+  mutate(text = gsub("[,\\!\\?\\.](?=[^’‘]*’[\\s—-])", " ", text, perl =
+                       TRUE))
+```
+
 
 ### Import Data
 
@@ -99,6 +124,18 @@ all_works_noabbreviation <- all_works_clean_import %>%
   mutate(cleaned = str_replace_all (cleaned, "\\.\\s\\.\\s\\.\\s", "punctellipse"))
 ```
 
+
+```{r}
+secondary_works_abbreviations <- secondary_works_clean %>% 
+  mutate(cleaned = rm_abbreviation(text, replacement = "abbreviationremoved")) %>%
+  mutate(cleaned = str_replace_all(cleaned, "Mr\\.", "Mr")) %>%
+  mutate(cleaned = str_replace_all(cleaned, "Mrs\\.", "Mrs")) %>%
+  mutate(cleaned = str_replace_all (cleaned, "\\.\\.\\.", "punctellipse")) %>%
+  mutate(cleaned = str_replace_all (cleaned, "\\.\\s\\.\\s\\.\\s", "punctellipse"))
+  
+```
+
+
 ### Secondary Descriptions
 
 ```{r create_text_types}
@@ -113,16 +150,15 @@ all_works_noabbreviation_type <- all_works_noabbreviation %>%
 ```{r corpus_type_ratio}
 #This calculates the percentage breakdown of the corpus. All functions have been left verbose for clarity.
 
-novel_short_story_length <- all_works_noabbreviation_type %>% 
-                            group_by(type) %>% 
-                            summarise (work_type_length = sum(work_length)) %>% 
-                            ungroup() %>% 
-                            mutate(percent = work_type_length/ sum(work_type_length))
+novel_short_story_length <- all_works_noabbreviation_type %>%
+  group_by(type) %>%
+  summarise (work_type_length = sum(work_length)) %>%
+  ungroup() %>%
+  mutate(percent = work_type_length / sum(work_type_length))
 
-short_story_percentage <- novel_short_story_length %>% 
-                          filter(type=="short_story") %>% 
-                          select(percent)
-                          
+short_story_percentage <- novel_short_story_length %>%
+  filter(type == "short_story") %>%
+  select(percent)
 
 ```
 
@@ -138,6 +174,24 @@ works_length_noabbreviation <- all_works_noabbreviation_type %>%
   filter(string_length > 0)
 ```
 
+
+```{r}
+secondary_length <- secondary_works_abbreviations %>% 
+                     group_by(title, date) %>%
+  unnest_regex(sentence, cleaned, "[.?!]") %>%
+  
+  mutate (string_length = str_count(sentence, "\\S+")) %>%
+  mutate(ellipse = str_count(sentence, "punctellipse"))  %>%
+  filter(string_length > 0)
+```
+
+```{r}
+secondary_overview <- secondary_length %>% 
+                      group_by(title) %>% 
+                      summarise(average_length = mean(string_length))
+```
+
+
 ```{r count_pauses}
 
 #Counts the average pauses in a work. This is used to find works with unusually high numbers of a particular type of punctuation.
@@ -152,11 +206,16 @@ works_punctuation_abbreviation <- works_length_noabbreviation %>%
 
 ```
 
+```{r}
+
+```
+
 
 
 ```{r}
 works_punctuation_abbreviation %>%
-  ggplot(aes(x = log(string_length))) +
+  filter(string_length<100) %>% 
+  ggplot(aes(x = string_length)) +
   geom_histogram(aes(y = ..density..),
                  colour = "black",
                  fill = "white") +
@@ -164,17 +223,11 @@ works_punctuation_abbreviation %>%
   ggtitle("String Length Distribution")
 ```
 
-
-
-
 ```{r}
 summary(works_punctuation_abbreviation)
 ```
 
-
 ## Summary Statistics and Exploratory Data Analysis
-
-
 
 ```{r summary_punctuation}
 # Create punctuation table and remove Requiem because the punctuation patterns do not match that of a novel. This table is used continuously downstream.
@@ -207,7 +260,6 @@ ggplot(aes(y = value, x = punctuation, fill=type)) +
     geom_bar(stat = "identity", position = "dodge") 
 ```
 
-
 ```{r summary_by_date}
 summary_by_date <- works_punctuation_abbreviation %>% 
                     group_by(date,type) %>% 
@@ -227,12 +279,23 @@ ggplot(aes(y = string_length, x = date, fill=type)) +
 punctuation_results <- summary_punctuation %>% 
                         select(title:type)
 ```
+## Sentence length
+
+It does not require computational analysis to understand that Faulkner writes in long sentences. For anyone who has ever taught Faulkner, it is perhaps the most common stumbling block among students. Faulkner experienced this himself during the series of lectures he gave at the University of Virginia, no fewer than x participants asked why he wrote with such long sentences (CITE). Quantifying what readers might mean when they say Faulkner's sentences are long is a bit more complex. On average, Faulkner's sentences are only slightly longer at 17 words per sentence that the 16 words per sentence in the Corpus of English Novels (Ihrmark 79). Nor is the high sentence length a feature of all his works. The *Sound and the Fury* is notoriously complex. Nevertheless, at only 10 words per sentence, it uses fewer words per sentence than Hemingway's *The Old Man and the Sea*, which averages 13 (Ihrmark 82). Yet, there is no world in which Faulkner's more verbose style would be confused with Hemingway's trademark concision. In part this also has to do with the internal distribution of sentence lengths within each text. The *The Sound and the Fury* ma have a lower average than *The Old Man and the Sea*, but it also contains one sentence that counts 4,000 words.  
+
+```{r}
+percent_long <- works_punctuation_abbreviation %>% 
+  filter(code=="SF") %>% 
+  mutate(total_sentence = nrow(works_length_noabbreviation %>% filter(code=="SF"))) %>% 
+  filter(string_length>17)
+  
+```
 
 
-
-### String Length 
+### String Length
 
 #### Distribution Chart
+
 ```{r string_length_distrtibution}
 summary_punctuation %>% 
 ggplot(aes(x=string_length)) + 
@@ -242,6 +305,7 @@ ggplot(aes(x=string_length)) +
 
 
 ```
+
 #### QQ Plot
 
 ```{r string_qqplot}
@@ -250,6 +314,7 @@ string_length_shapiro <- shapiro.test(log1p(summary_punctuation$string_length))
 ggqqplot(log1p(summary_punctuation$string_length), xlab = "Text", title = paste("String Length Distribution", "Shapiro P value < ", round(string_length_shapiro$p.value,6))
          )
 ```
+
 #### Rosner Test
 
 ```{r string_distribution}
@@ -268,9 +333,11 @@ string_length_outlier_obs <-  string_length_test$all.stats %>%
 string_length_outlier_result <- summary_punctuation[string_length_outlier_obs$Obs.Num,] %>% 
                                 ungroup() %>% 
                                 select(title, string_length)
-punctuation_results <-  punctuation_results %>% 
-  left_join(string_length_outlier_result, by = join_by(title)) %>% 
-  rename(string_length_rosner = string_length)
+```
+
+
+```{r string_distribution}
+
 ```
 
 #### Adjusted Boxplot
@@ -282,17 +349,18 @@ string_length_boxplot_outlier_result <-
   summary_punctuation[string_length_adjusted_boxplot$outliers, ] %>%
   ungroup() %>%
   select(title, string_length)
-
-punctuation_results <- punctuation_results %>%
-  left_join(string_length_boxplot_outlier_result, by = join_by(title)) %>%
-  rename(string_length_boxplot = string_length)
-
 ```
 
+
+```{r}
+
+
+```
 
 ### Ellipse
 
 #### Distribution
+
 ```{r ellipse_distribution}
 summary_punctuation %>%
   ggplot(aes(x = ellipse)) +
@@ -302,6 +370,7 @@ summary_punctuation %>%
   geom_density(alpha = .2, fill = "#FF6666") +
   ggtitle("Ellipse Distribution")
 ```
+
 #### QQ Plot
 
 ```{r ellipse_distribution}
@@ -337,13 +406,11 @@ ellipse_outlier_result <-
   ungroup() %>%
   select(title, ellipse)
 
-punctuation_results <-  punctuation_results %>%
-  left_join(ellipse_outlier_result, by = join_by(title)) %>%
-  rename(ellipse_rosner = ellipse)
+
 ```
 
 #### Adjusted Boxplot
-  
+
 ```{r ellipse_adjusted_box}
 ellipse_adjusted_boxplot <-
   boxB(summary_punctuation$ellipse, method = "adjbox")
@@ -353,11 +420,8 @@ ellipse_boxplot_outlier_result <-
   ungroup() %>%
   select(title, ellipse)
 
-punctuation_results <- punctuation_results %>% 
-  left_join(ellipse_boxplot_outlier_result, by = join_by(title)) %>% 
-  rename(ellipse_boxplot = ellipse)
-```
 
+```
 
 ### Comma
 
@@ -372,6 +436,7 @@ summary_punctuation %>%
   geom_density(alpha = .2, fill = "#FF6666") +
   ggtitle("comma Distribution")
 ```
+
 #### QQ Plot
 
 ```{r}
@@ -399,9 +464,7 @@ comma_outlier_result <- summary_punctuation[comma_outlier_obs$Obs.Num,] %>%
                                 ungroup() %>% 
                                 select(title, comma)
 
-punctuation_results <-  punctuation_results %>%
-  left_join(comma_outlier_result, by = join_by(title)) %>%
-  rename(comma_rosner = comma)
+
 ```
 
 #### Adjusted Boxplot
@@ -415,9 +478,7 @@ comma_boxplot_outlier_result <-
   ungroup() %>%
   select(title, comma)
 
-punctuation_results <- punctuation_results %>%
-  left_join(comma_boxplot_outlier_result, by = join_by(title)) %>%
-  rename(comma_boxplot = comma)
+
 ```
 
 ### Semi-Colon
@@ -434,6 +495,7 @@ summary_punctuation %>%
   ggtitle("Semi-Colon Distribution")
   
 ```
+
 #### QQ Plot
 
 ```{r semi_colon_qq}
@@ -449,7 +511,6 @@ ggqqplot(
   )
 )
 ```
-
 
 #### Rosner Test
 
@@ -471,15 +532,11 @@ semi_colon_outlier_result <-
   ungroup() %>%
   select(title, semi_colon)
 
-punctuation_results <-  punctuation_results %>%
-  left_join(semi_colon_outlier_result, by = join_by(title)) %>%
-  rename(semi_colon_rosner = semi_colon)
 
 
 ```
 
 #### Adjusted Box Plot
-
 
 ```{r}
 semi_colon_adjusted_boxplot <- boxB(summary_punctuation$semi_colon, method="adjbox")
@@ -488,14 +545,13 @@ semi_colon_boxplot_outlier_result <- summary_punctuation[semi_colon_adjusted_box
                                 ungroup() %>% 
                                 select(title, semi_colon)
 
-punctuation_results <- punctuation_results %>% 
-  left_join(semi_colon_boxplot_outlier_result, by = join_by(title)) %>% 
-  rename(semi_colon_boxplot = semi_colon)
+
 ```
 
 ### Dash
 
 #### Distribution
+
 ```{r}
 summary_punctuation %>% 
 
@@ -504,7 +560,6 @@ ggplot(aes(x=dash)) +
   geom_density(alpha=.2, fill="#FF6666")+
    ggtitle("Dash Distribution")
 ```
-
 
 #### Dash QQ Plot
 
@@ -532,9 +587,6 @@ dash_outlier_result <- summary_punctuation[dash_outlier_obs$Obs.Num,] %>%
                                 ungroup() %>% 
                                 select(title, dash)
 
-punctuation_results <-  punctuation_results %>% 
-  left_join(dash_outlier_result, by = join_by(title)) %>% 
-  rename(dash_rosner = dash)
 ```
 
 #### Adjusted Boxplot
@@ -546,13 +598,10 @@ dash_boxplot_outlier_result <- summary_punctuation[dash_adjusted_boxplot$outlier
                                 ungroup() %>% 
                                 select(title, dash)
 
-punctuation_results <- punctuation_results %>% 
-  left_join(dash_boxplot_outlier_result, by = join_by(title)) %>% 
-  rename(dash_boxplot = dash)
+
 
 
 ```
-
 
 ### Colon
 
@@ -566,6 +615,7 @@ ggplot(aes(x = colon)) +
   ggtitle("Colon Distribution")
 
 ```
+
 #### QQ Plot
 
 ```{r}
@@ -592,9 +642,7 @@ colon_outlier_result <- summary_punctuation[colon_outlier_obs$Obs.Num,] %>%
                                 ungroup() %>% 
                                 select(title, colon)
 
-punctuation_results <-  punctuation_results %>% 
-  left_join(colon_outlier_result, by = join_by(title)) %>% 
-  rename(colon_rosner = colon)
+
                        
 ```
 
@@ -607,9 +655,7 @@ colon_boxplot_outlier_result <- summary_punctuation[colon_adjusted_boxplot$outli
                                 ungroup() %>% 
                                 select(title, colon)
 
-punctuation_results <- punctuation_results %>% 
-  left_join(colon_boxplot_outlier_result, by = join_by(title)) %>% 
-  rename(colon_boxplot = colon)
+
 ```
 
 ### Parenthesis
@@ -633,7 +679,6 @@ ggqqplot(log1p(summary_punctuation$parenthesis), xlab = "Text", title = paste("p
          )
 ```
 
-
 #### Rosner Test
 
 ```{r}
@@ -651,9 +696,7 @@ parenthesis_outlier_result <- summary_punctuation[parenthesis_outlier_obs$Obs.Nu
                                 ungroup() %>% 
                                 select(title, parenthesis)
 
-punctuation_results <-  punctuation_results %>% 
-  left_join(parenthesis_outlier_result, by = join_by(title)) %>% 
-  rename(parenthesis_rosner = parenthesis)
+
                        
 ```
 
@@ -666,12 +709,48 @@ parenthesis_boxplot_outlier_result <- summary_punctuation[parenthesis_adjusted_b
                                 ungroup() %>% 
                                 select(title, parenthesis)
 
-punctuation_results <- punctuation_results %>% 
-  left_join(parenthesis_boxplot_outlier_result, by = join_by(title)) %>% 
-  rename(parenthesis_boxplot = parenthesis)
+
 ```
 
 ### All Outliers
+
+```{r}
+# Create punctuation result
+punctuation_results <-  punctuation_results %>% 
+  left_join(string_length_outlier_result, by = join_by(title)) %>% 
+  rename(string_length_rosner = string_length) %>% 
+  left_join(string_length_boxplot_outlier_result, by = join_by(title)) %>%
+  rename(string_length_boxplot = string_length) %>% 
+  left_join(ellipse_outlier_result, by = join_by(title)) %>%
+  rename(ellipse_rosner = ellipse) %>% 
+  left_join(ellipse_boxplot_outlier_result, by = join_by(title)) %>% 
+  rename(ellipse_boxplot = ellipse) %>% 
+  left_join(comma_outlier_result, by = join_by(title)) %>%
+  rename(comma_rosner = comma) %>% 
+  left_join(comma_boxplot_outlier_result, by = join_by(title)) %>%
+  rename(comma_boxplot = comma) %>% 
+  left_join(semi_colon_outlier_result, by = join_by(title)) %>%
+  rename(semi_colon_rosner = semi_colon) %>% 
+  left_join(semi_colon_boxplot_outlier_result, by = join_by(title)) %>% 
+  rename(semi_colon_boxplot = semi_colon) %>% 
+  left_join(dash_outlier_result, by = join_by(title)) %>% 
+  rename(dash_rosner = dash) %>% 
+  left_join(dash_boxplot_outlier_result, by = join_by(title)) %>% 
+  rename(dash_boxplot = dash) %>% 
+  left_join(colon_outlier_result, by = join_by(title)) %>% 
+  rename(colon_rosner = colon) %>% 
+  left_join(colon_boxplot_outlier_result, by = join_by(title)) %>% 
+  rename(colon_boxplot = colon) %>% 
+  left_join(parenthesis_outlier_result, by = join_by(title)) %>% 
+  rename(parenthesis_rosner = parenthesis) %>% 
+  left_join(parenthesis_boxplot_outlier_result, by = join_by(title)) %>% 
+  rename(parenthesis_boxplot = parenthesis)
+
+
+```
+
+
+
 ```{r}
 all_outliers <- punctuation_results %>% 
   rowwise() %>% 
@@ -680,52 +759,34 @@ all_outliers <- punctuation_results %>%
   filter(outlier == TRUE)
 ```
 
-
-
-
-
 ```{r}
 #| include: false
 
-pauses <- summary_punctuation %>% 
-          ungroup() %>% 
-          mutate(across(c(ellipse:parenthesis), ~log1p(.x))) %>% 
-          select(ellipse:parenthesis)
-
+# pauses <- summary_punctuation %>% 
+#           ungroup() %>% 
+#           mutate(across(c(ellipse:parenthesis), ~log1p(.x))) %>% 
+#           select(ellipse:parenthesis)
+# 
 
 ```
 
 ```{r}
-ggplot(gather(pauses),  aes(x=key, y=value)) + geom_boxplot(aes(fill=key))
+# ggplot(gather(pauses),  aes(x=key, y=value)) + geom_boxplot(aes(fill=key))
 ```
-
-
-
-
-
-
 
 ## The Extending the Sentences: Pauses and Such
 
 Sentence length is a crude tool for understanding how Faulkner was trying to capture the long sentence. After all, it indicates where they begin and end, but not what is happening in them. Here too it is useful to turn to computational techniques to understand the linguistic patterns as a whole. While sentence length can be calculated by measuring the distance between the first capital letter and full-stop, it is possible to get a sense of how the sentence diverts, tarries, and pauses by looking at mid-sentence punctuation like: colons, semi-colons, and parenthesis. Faulkner is not merely making sentences very long, but using punctuation to stretch out the definition of a sentence, and, in turn, call attention to the punctuation itself. The finality of the period is replaced with the indeterminacy of the unfinished sentence. What is telling about Faulkner's writing is that he does not simply write long sentences throughout his career, but experiments with different punctuation configurations to make this possible. Three salient examples from throughout his career stand out: Mosquitos, Absalom, and Intruder in the Dust. Procedure
 
-On the surface, the technical procedure for counting mid-sentence punctuation is not particularly complex. All of Faulkner's texts was broken down into sentences and the each mid-sentence punctuation mark was counted. Since the odds of a mid-sentence punctuation mark go up when there are more words in a sentence, the average number of each punctuation per word was taken for each text. This gives some indication of the central tendency of punctuation marks across the corpus. In short, it provided a window into what is a "normal" number of punctuation marks per word in all of Faulkner's texts. Based on this data it is possible to infer outliers, or data that appears irregular. This procedure is highly interpretive. First, since the data is exclusively about Faulkner's texts, it is hard to know how non-normal his punctuation is relative to other authors. Second, the corpus of novels and collected and uncollected stories itself is heterogeneous. The most salient example is *Requiem for a Nun*, which is written as a play and therefore has a higher number of parenthesis consonant with that form. Likewise, a relatively small percentage `r round(short_story_percentage$percent, 0)`% of the texts are short stories. These stories have a slightly shorter average sentence length of `r round(summary_by_type$string_length[2],0)` words versus `r round(summary_by_type$string_length[1], 0)` words in the novels. Including or excluding Requiem for a Nun and the short stories creates a slighlty different mean across the board, which, in turn, sets a different baseline as to what constitutes Faulkner's "normal" writing. Since there are convincing arguments to be made for both scenarios, both were tested for outliers. 
+On the surface, the technical procedure for counting mid-sentence punctuation is not particularly complex. All of Faulkner's texts was broken down into sentences and the each mid-sentence punctuation mark was counted. Since the odds of a mid-sentence punctuation mark go up when there are more words in a sentence, the average number of each punctuation per word was taken for each text. This gives some indication of the central tendency of punctuation marks across the corpus. In short, it provided a window into what is a "normal" number of punctuation marks per word in all of Faulkner's texts. Based on this data it is possible to infer outliers, or data that appears irregular. This procedure is highly interpretive. First, since the data is exclusively about Faulkner's texts, it is hard to know how non-normal his punctuation is relative to other authors. Second, the corpus of novels and collected and uncollected stories itself is heterogeneous. The most salient example is *Requiem for a Nun*, which is written as a play and therefore has a higher number of parenthesis consonant with that form. Likewise, a substantial percentage `r round(short_story_percentage$percent, 0)`% of the texts are short stories. These stories have a slightly shorter average sentence length of `r round(summary_by_type$string_length[2],0)` words versus `r round(summary_by_type$string_length[1], 0)` words in the novels. Including or excluding Requiem for a Nun and the short stories creates a slighlty different mean across the board, which, in turn, sets a different baseline as to what constitutes Faulkner's "normal" writing. Since there are convincing arguments to be made for both scenarios, both were tested for outliers.
 
-
-Generally, the normal distribution for punctuation marks in Faulkner's texts is right-skewed; the curve has a long tail to the right. Intuitively, this makes sense. Unlike grades which follow a normal, bell-shaped distribution, punctuation marks in a sentence do not have a defined upper limit. It is therefore possible to have some texts with a substantially higher frequency of a particular kind of punctuation marks per word. In the same way that it is possible for some people to have a much higher income than the mean income. The common procedure for dealing with right skewed data is to take the natural log and test for a normal distribution. This essentially reduces the distance between x values by scaling them. The resulting data can then be tested for normalcy. This was done statistically with the Shapiro-Wilk normality test and visually with a qq chart. Once normalcy has been confirmed it is possible to test for outliers. While there are plenty of statistical tests for outliers, this is to some extent a subjective practice. Each test has some underlyinig assumptions. That said, using the Rosner test on all of the punctuations revealed three texts that were statistically unusual: Mosquitos had significantly more parenthesis per word than any of the other texts and Absalom, Absalom! had signficantly more parenthesis than other texts. Intruder in the Dust had significantly more colons than all the other texts, but this difference only showed itself when all of the texts were included. 
-
+Generally, the normal distribution for punctuation marks in Faulkner's texts is right-skewed; the curve has a long tail to the right. Intuitively, this makes sense. Unlike grades which follow a normal, bell-shaped distribution, punctuation marks in a sentence do not have a defined upper limit. It is therefore possible to have some texts with a substantially higher frequency of a particular kind of punctuation marks per word. In the same way that it is possible for some people to have a much higher income than the mean income. The common procedure for dealing with right skewed data is to take the natural log and test for a normal distribution. This essentially reduces the distance between x values by scaling them. The resulting data can then be tested for normalcy. This was done statistically with the Shapiro-Wilk normality test and visually with a qq chart. Once normalcy has been confirmed it is possible to test for outliers. While there are plenty of statistical tests for outliers, this is to some extent a subjective practice. Each test has some underlyinig assumptions. That said, using the Rosner test on all of the punctuations revealed three texts that were statistically unusual: Mosquitos had significantly more parenthesis per word than any of the other texts and Absalom, Absalom! had signficantly more parenthesis than other texts. Intruder in the Dust had significantly more colons than all the other texts, but this difference only showed itself when all of the texts were included.
 
 NOTE: Punctuation like other linguistic phenomenon follows logrithmic regression or the power law like zipf's law. While so and so attribute this to a least-effort hypothesis, instead it is far more related to the unity of thought. Less punctuation is more directive. QUote from shou
 
-
 Since punctuation follows discernible rules, it makes sense that he distribution of punctuation marks is right-skewed; it has a long tail to the right. That is, it is very likely that given sentence length x that there are n-number of mid-sentence punctuation marks, it is far less likely that there are more than n and impossible for there to be negative puncuation marks. The odds of there being more than n drop precipitiously because that would mean violating the basic rules of grammar. It is these violations that are interesting. There are several statistical methods for detecting these rule breakers. They all rely on some measure of interpretation. In the hard sciences an outlier is usually described as something that inordinately skews the data a broken pipette or someone who did not properly understand the questionarie. The rules of grammar are different.
 
-
-
-With the exception of commas the distributions are very narrow with a long, right-skewed tail. This makes a lot of sense when we consider the basic structure of grammar. It is very possible to have multiple commas in one sentence, it is much less likely to have multiple colons or multiple semi-colons. Likewise, sentences generally only have one set of parenthesis. 
-
-
-
+With the exception of commas the distributions are very narrow with a long, right-skewed tail. This makes a lot of sense when we consider the basic structure of grammar. It is very possible to have multiple commas in one sentence, it is much less likely to have multiple colons or multiple semi-colons. Likewise, sentences generally only have one set of parenthesis.
 
 ## Import Demographics
 
