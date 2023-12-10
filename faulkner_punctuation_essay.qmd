@@ -35,6 +35,8 @@ In this pieces I will argue: Faulkner pushes the very definition of a sentence i
 
 ### Corpus Description
 
+I"M MAKING A MINOR Change right here
+
 Faulkner's corpus is quite heterogeneous, and consists of novels, short stories, poetry, film scripts, and a text that hovers between a stage play and a novel: *Requiem for a Nun*. Even within these broad categories there are further subdivisions. Speaking of the novels and short-stories more narrowly, there are the 14 novels and 68 short-stories that take place in his famous Yoknapatawpha County. Among these are "uncollected" short stories that were only ever published in magazines and then incorporated wholesale or in part into novels such as *The Unvanquished*, *The Hamlet*, and *Go Down, Moses*. There is also a further set of unpublished stories that are interesting in their own right or that have resonances with Faulkner's more well-known published work. This leads to a rich body of work that makes for a poor experimental design. Using computational techniques to analyze texts works best when detecting patterns and exceptions to those patterns within a particular domain. When a corpus is heterogeneous with many unique texts, it is harder to detect a pattern when everything appears to be an exception. While it is possible to make certain generalizations about Faulkner's writing, these observations across the entire corpus are not very meaningful. For example, Faulkner writes longer sentences than other authors `r round(mean(summary_punctuation$string_length),0)`, but this number varies quite widely from an entirely average x words per sentence to works that are exceptionally verbose. Suffice to say that the data has been sliced up to properly compare works that have some sort of underlying similarity.
 
 ## Computation
@@ -75,8 +77,6 @@ secondary_works <- list.files(file.path("secondary_authors"), full.names = TRUE,
   )) 
 ```
 
-
-
 ```{r normalize_punctuation}
 #| include: false
 
@@ -87,13 +87,11 @@ all_works_clean <- all_works %>%
                        TRUE))
 ```
 
-
 ```{r}
 secondary_works_clean <- secondary_works %>%
   mutate(text = gsub("[,\\!\\?\\.](?=[^’‘]*’[\\s—-])", " ", text, perl =
                        TRUE))
 ```
-
 
 ### Import Data
 
@@ -124,7 +122,6 @@ all_works_noabbreviation <- all_works_clean_import %>%
   mutate(cleaned = str_replace_all (cleaned, "\\.\\s\\.\\s\\.\\s", "punctellipse"))
 ```
 
-
 ```{r}
 secondary_works_abbreviations <- secondary_works_clean %>% 
   mutate(cleaned = rm_abbreviation(text, replacement = "abbreviationremoved")) %>%
@@ -134,7 +131,6 @@ secondary_works_abbreviations <- secondary_works_clean %>%
   mutate(cleaned = str_replace_all (cleaned, "\\.\\s\\.\\s\\.\\s", "punctellipse"))
   
 ```
-
 
 ### Secondary Descriptions
 
@@ -174,7 +170,6 @@ works_length_noabbreviation <- all_works_noabbreviation_type %>%
   filter(string_length > 0)
 ```
 
-
 ```{r}
 secondary_length <- secondary_works_abbreviations %>% 
                      group_by(title, date) %>%
@@ -190,7 +185,6 @@ secondary_overview <- secondary_length %>%
                       group_by(title) %>% 
                       summarise(average_length = mean(string_length))
 ```
-
 
 ```{r count_pauses}
 
@@ -209,8 +203,6 @@ works_punctuation_abbreviation <- works_length_noabbreviation %>%
 ```{r}
 
 ```
-
-
 
 ```{r}
 works_punctuation_abbreviation %>%
@@ -279,12 +271,12 @@ ggplot(aes(y = string_length, x = date, fill=type)) +
 punctuation_results <- summary_punctuation %>% 
                         select(title:type)
 ```
+
 ## Sentence length
 
-It does not require computational analysis to understand that Faulkner writes in long sentences. For anyone who has ever taught Faulkner, it is perhaps the most common stumbling block among students. Faulkner experienced this himself during the series of lectures he gave at the University of Virginia, no fewer than x participants asked why he wrote with such long sentences (CITE). Quantifying what readers might mean when they say Faulkner's sentences are long is a bit more complex. On average, Faulkner's sentences are only slightly longer at 17 words per sentence that the 16 words per sentence in the Corpus of English Novels (Ihrmark 79). Nor is the high sentence length a feature of all his works. The *Sound and the Fury* is notoriously complex. Nevertheless, at only 10 words per sentence, it uses fewer words per sentence than Hemingway's *The Old Man and the Sea*, which averages 13 (Ihrmark 82). Yet, there is no world in which Faulkner's more verbose style would be confused with Hemingway's trademark concision. In part this also has to do with the internal distribution of sentence lengths within each text. The *The Sound and the Fury* may have a lower average than *The Old Man and the Sea*, but it also contains one sentence that counts over 4,000 words. Clearly, this is less succinct than Hemingway, and probably most other authors as well. 
+It does not require computational analysis to understand that Faulkner writes in long sentences. For anyone who has ever taught Faulkner, it is perhaps the most common stumbling block among students. Faulkner experienced this himself during the series of lectures he gave at the University of Virginia, no fewer than x participants asked why he wrote with such long sentences (CITE). Quantifying what readers might mean when they say Faulkner's sentences are long is a bit more complex. On average, Faulkner's sentences are only slightly longer at 17 words per sentence that the 16 words per sentence in the Corpus of English Novels (Ihrmark 79). Nor is the high sentence length a feature of all his works. The *Sound and the Fury* is notoriously complex. Nevertheless, at only 10 words per sentence, it uses fewer words per sentence than Hemingway's *The Old Man and the Sea*, which averages 13 (Ihrmark 82). Yet, there is no world in which Faulkner's more verbose style would be confused with Hemingway's trademark concision. In part this also has to do with the internal distribution of sentence lengths within each text. The *The Sound and the Fury* may have a lower average than *The Old Man and the Sea*, but it also contains one sentence that counts over 4,000 words. Clearly, this is less succinct than Hemingway, and probably most other authors as well.
 
-A better indicator for understanding lengthiness, such as it is, is the internal structure of a sentence. 
-
+A better indicator for understanding lengthiness, such as it is, is the internal structure of a sentence.
 
 ```{r}
 percent_long <- works_punctuation_abbreviation %>% 
@@ -293,7 +285,6 @@ percent_long <- works_punctuation_abbreviation %>%
   filter(string_length>17)
   
 ```
-
 
 ### String Length
 
@@ -338,7 +329,6 @@ string_length_outlier_result <- summary_punctuation[string_length_outlier_obs$Ob
                                 select(title, string_length)
 ```
 
-
 ```{r string_distribution}
 
 ```
@@ -353,7 +343,6 @@ string_length_boxplot_outlier_result <-
   ungroup() %>%
   select(title, string_length)
 ```
-
 
 ```{r}
 
@@ -751,8 +740,6 @@ punctuation_results <-  punctuation_results %>%
 
 
 ```
-
-
 
 ```{r}
 all_outliers <- punctuation_results %>% 
