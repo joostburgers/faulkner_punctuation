@@ -27,7 +27,9 @@ library(univOutl)
 
 There is a lot to say about Faulkner and punctuation.
 
-In this pieces I will argue: Faulkner pushes the very definition of a sentence in order to demonstrate the continuity of time. Yet, how he experiments with punctuation to achieve this end changes throughout his career. What's more, the philosophy of the long sentence appears to only have salience for some of his fiction and not all of it.
+In this pieces I will argue:
+
+Faulkner pushes the very definition of a sentence in order to demonstrate the continuity of time. Yet, how he experiments with punctuation to achieve this end changes throughout his career. What's more, the philosophy of the long sentence appears to only have salience for some of his fiction and not all of it.
 
 ## Critical literature on Faulkner
 
@@ -35,9 +37,7 @@ In this pieces I will argue: Faulkner pushes the very definition of a sentence i
 
 ### Corpus Description
 
-I"M MAKING A MINOR Change right here
-
-Faulkner's corpus is quite heterogeneous, and consists of novels, short stories, poetry, film scripts, and a text that hovers between a stage play and a novel: *Requiem for a Nun*. Even within these broad categories there are further subdivisions. Speaking of the novels and short-stories more narrowly, there are the 14 novels and 68 short-stories that take place in his famous Yoknapatawpha County. Among these are "uncollected" short stories that were only ever published in magazines and then incorporated wholesale or in part into novels such as *The Unvanquished*, *The Hamlet*, and *Go Down, Moses*. There is also a further set of unpublished stories that are interesting in their own right or that have resonances with Faulkner's more well-known published work. This leads to a rich body of work that makes for a poor experimental design. Using computational techniques to analyze texts works best when detecting patterns and exceptions to those patterns within a particular domain. When a corpus is heterogeneous with many unique texts, it is harder to detect a pattern when everything appears to be an exception. While it is possible to make certain generalizations about Faulkner's writing, these observations across the entire corpus are not very meaningful. For example, Faulkner writes longer sentences than other authors `r round(mean(summary_punctuation$string_length),0)`, but this number varies quite widely from an entirely average x words per sentence to works that are exceptionally verbose. Suffice to say that the data has been sliced up to properly compare works that have some sort of underlying similarity.
+Faulkner's corpus is quite heterogeneous, and consists of novels, short stories, poetry, film scripts, and a text that hovers between a stage play and a novel: *Requiem for a Nun*. Even within these broad categories there are further subdivisions. Speaking of the novels and short-stories more narrowly, there are the 14 novels and 54 short-stories that take place in his famous Yoknapatawpha County. Among these are "uncollected" short stories that were only ever published in magazines and then incorporated wholesale or in part into novels such as *The Unvanquished*, *The Hamlet*, and *Go Down, Moses*. There is also a further set of unpublished stories that are interesting in their own right or that have resonances with Faulkner's more well-known published texts. This leads to a rich body of work that makes for a poor experimental design. Using computational techniques to analyze texts, works best when detecting patterns and exceptions within a particular domain. When a corpus is heterogeneous with many unique texts, it is harder to detect the rules when everything appears to be an exception. While it is possible to make certain generalizations about Faulkner's writing, these observations across the entire corpus are not very meaningful. For example, Faulkner writes longer sentences than other authors `r round(mean(summary_punctuation$string_length),0)`, but this number varies quite widely from an entirely average x words per sentence to works that are exceptionally verbose. Therefore, it makes more sense to stay away from large assumptions about how Faulkner punctuated his texts, and instead focus on how Faulkner did so in a particular context, be it his novels, short stories, or other writings. These local insights can then be stitched together to create a more global collage.
 
 ## Computation
 
@@ -115,11 +115,11 @@ all_works_clean_import <- read_csv("processed_data/all_works_clean.csv", show_co
 # Because all strings are unnested on the end of sentence period, periods that appear before that moment have to be removed. These include periods in standard abbreviations (i.e. F.B.I.), common titles (Mr./Mrs.), and ellipses (... or . . . ). 
 
 all_works_noabbreviation <- all_works_clean_import %>%
-  mutate(cleaned = rm_abbreviation(text, replacement = "abbreviationremoved")) %>%
-  mutate(cleaned = str_replace_all(cleaned, "Mr\\.", "Mr")) %>%
-  mutate(cleaned = str_replace_all(cleaned, "Mrs\\.", "Mrs")) %>%
-  mutate(cleaned = str_replace_all (cleaned, "\\.\\.\\.", "punctellipse")) %>%
-  mutate(cleaned = str_replace_all (cleaned, "\\.\\s\\.\\s\\.\\s", "punctellipse"))
+  mutate(cleaned = rm_abbreviation(text, replacement = "abbreviationremoved ")) %>%
+  mutate(cleaned = str_replace_all(cleaned, "Mr\\.", "Mr ")) %>%
+  mutate(cleaned = str_replace_all(cleaned, "Mrs\\.", "Mrs ")) %>%
+  mutate(cleaned = str_replace_all (cleaned, "\\.\\.\\.", "punctellipse ")) %>%
+  mutate(cleaned = str_replace_all (cleaned, "\\.\\s\\.\\s\\.\\s", "punctellipse "))
 ```
 
 ```{r}
@@ -127,9 +127,10 @@ secondary_works_abbreviations <- secondary_works_clean %>%
   mutate(cleaned = rm_abbreviation(text, replacement = "abbreviationremoved")) %>%
   mutate(cleaned = str_replace_all(cleaned, "Mr\\.", "Mr")) %>%
   mutate(cleaned = str_replace_all(cleaned, "Mrs\\.", "Mrs")) %>%
-  mutate(cleaned = str_replace_all (cleaned, "\\.\\.\\.", "punctellipse")) %>%
-  mutate(cleaned = str_replace_all (cleaned, "\\.\\s\\.\\s\\.\\s", "punctellipse"))
-  
+  mutate(cleaned = str_replace_all (cleaned, "\\.\\.\\.", "punctellipse ")) %>%
+  mutate(cleaned = str_replace_all (cleaned, "\\.\\s\\.\\s\\.\\s", "punctellipse "))
+  mutate(cleaned = str_replace_all (cleaned, "\\.\\.\\.\\.", "punctellipse4 ")) %>%
+  mutate(cleaned = str_replace_all (cleaned, "\\.\\s\\.\\s\\.\\s.\\s", "punctellipse4 "))
 ```
 
 ### Secondary Descriptions
@@ -167,6 +168,7 @@ works_length_noabbreviation <- all_works_noabbreviation_type %>%
   
   mutate (string_length = str_count(sentence, "\\S+")) %>%
   mutate(ellipse = str_count(sentence, "punctellipse"))  %>%
+  mutate(ellipse4 = str_count(sentence, "punctellipse4"))  %>%
   filter(string_length > 0)
 ```
 
@@ -274,17 +276,36 @@ punctuation_results <- summary_punctuation %>%
 
 ## Sentence length
 
-It does not require computational analysis to understand that Faulkner writes in long sentences. For anyone who has ever taught Faulkner, it is perhaps the most common stumbling block among students. Faulkner experienced this himself during the series of lectures he gave at the University of Virginia, no fewer than x participants asked why he wrote with such long sentences (CITE). Quantifying what readers might mean when they say Faulkner's sentences are long is a bit more complex. On average, Faulkner's sentences are only slightly longer at 17 words per sentence that the 16 words per sentence in the Corpus of English Novels (Ihrmark 79). Nor is the high sentence length a feature of all his works. The *Sound and the Fury* is notoriously complex. Nevertheless, at only 10 words per sentence, it uses fewer words per sentence than Hemingway's *The Old Man and the Sea*, which averages 13 (Ihrmark 82). Yet, there is no world in which Faulkner's more verbose style would be confused with Hemingway's trademark concision. In part this also has to do with the internal distribution of sentence lengths within each text. The *The Sound and the Fury* may have a lower average than *The Old Man and the Sea*, but it also contains one sentence that counts over 4,000 words. Clearly, this is less succinct than Hemingway, and probably most other authors as well.
+It does not require computational analysis to understand that Faulkner writes in long sentences. For anyone who has ever taught Faulkner, it is perhaps the most common stumbling block and, indeed, complaint among students. Faulkner experienced this resistance himself during the series of lectures he gave at the University of Virginia, no fewer than 4 participants asked why he wrote with such long sentences (CITE). Quantifying what readers might mean when they say Faulkner's sentences are long is a bit more complex. On average, Faulkner's sentences are only slightly longer at 17 words per sentence than the 16 words per sentence in the Corpus of English Novels (Ihrmark 79). Nor is the high sentence length a feature of all his works. The *Sound and the Fury* is notoriously complex. Nevertheless, at only 10 words per sentence, it uses fewer words per sentence than Hemingway's *The Old Man and the Sea*, which averages 13 (Ihrmark 82). Despite this statistical reality, Faulkner's more verbose style could never be confused with Hemingway's trademark concision. In part, this has to do with the distribution of sentence lengths within each text. The *The Sound and the Fury* may have a lower average word count than *The Old Man and the Sea*, but it also contains one sentence that counts over 4,000 words. Clearly, this is less succinct than Hemingway, and probably most other authors as well. These long sentences, it should be noted, are more of a statistical exception that the rule. The normal distribution for this text, and most of Faulkner's other texts is right-skewed. Meaning that for the most part they tend of have "average"-length sentences interspersed with much longer sentences. In the case of the *Sound and the Fury* roughly 90% of the sentences are 17 words or fewer in length. In this text, and most of Faulkner's other texts (60%), the average sentence length is actually lower than the total average. More succinctly, just as a small share of sentences in each work gives the impression of long sentences. Likewise, within the corpus of Faulkner's writing there are a minority of works that are above average in sentence length. Lengthy sentences are a local feature not a global phenomenon.
 
-A better indicator for understanding lengthiness, such as it is, is the internal structure of a sentence.
+Despite statistical indications to the contrary, lengthy sentences are seen as hallmark feature of Faulkner's writing. In part this may be because some of Faulkner's most canonical works feature long sentences, *Go Down, Moses*, *Absalom, Absalom*, "A Rose for Emily", and "Barn Burning". These works are, in a sense, more Faulknerian than a relatively unknown early text like "Elly". Nevertheless, equally canonical works like *The Sound and the Fury*, *Light in August*, and *As I Lay Dying* do not, on average, stand out as being particularly verbose relative to the the general mass of texts written in English at this particular time. Despite these counter indications, it goes against a firmly established scholarly tradition based on Faulkner's own statements and, indeed, common sense, to argue that lengthy sentences aren't Faulkner's particular metier. Instead, to understand why Faulkner's sentences, for lack of a better word, feel long it is informative to look at their internal structure. 
+
+### Internal structure
+
 
 ```{r}
-percent_long <- works_punctuation_abbreviation %>% 
-  filter(code=="SF") %>% 
-  mutate(total_sentence = nrow(works_length_noabbreviation %>% filter(code=="SF"))) %>% 
-  filter(string_length>17)
+average_sentence_length <- works_punctuation_abbreviation %>% 
+                  group_by(title, code) %>% 
+                  summarise(average_string_length=mean(string_length)) 
+ 
+texts_with_long_sentences <- mean(average_sentence_length$average_string_length>mean(average_sentence_length$average_string_length))
+
+
+
+sentences_sf <- nrow(works_length_noabbreviation %>% filter(code=="SF"))
+long_sentences_sf <-  nrow(works_length_noabbreviation %>% filter(code=="SF") %>% filter(string_length>17))
+percent_long <- long_sentences_sf/sentences_sf
+
   
 ```
+
+```{r}
+summary(works_punctuation_abbreviation %>% 
+  filter(code=="SF"))
+```
+
+
+
 
 ### String Length
 
@@ -708,7 +729,8 @@ parenthesis_boxplot_outlier_result <- summary_punctuation[parenthesis_adjusted_b
 
 ```{r}
 # Create punctuation result
-punctuation_results <-  punctuation_results %>% 
+punctuation_results_full_table <- NULL
+punctuation_results_full_table <-  punctuation_results %>% 
   left_join(string_length_outlier_result, by = join_by(title)) %>% 
   rename(string_length_rosner = string_length) %>% 
   left_join(string_length_boxplot_outlier_result, by = join_by(title)) %>%
@@ -742,7 +764,7 @@ punctuation_results <-  punctuation_results %>%
 ```
 
 ```{r}
-all_outliers <- punctuation_results %>% 
+all_outliers <- punctuation_results_full_table %>% 
   rowwise() %>% 
   mutate(outlier = sum(c_across(where(is.numeric)), na.rm = T)) %>% 
   mutate(outlier = ifelse(outlier>0,TRUE,FALSE)) %>% 
@@ -764,11 +786,18 @@ all_outliers <- punctuation_results %>%
 # ggplot(gather(pauses),  aes(x=key, y=value)) + geom_boxplot(aes(fill=key))
 ```
 
-## The Extending the Sentences: Pauses and Such
+## Extending the Sentences: Pauses and Such
 
-Sentence length is a crude tool for understanding how Faulkner was trying to capture the long sentence. After all, it indicates where they begin and end, but not what is happening in them. Here too it is useful to turn to computational techniques to understand the linguistic patterns as a whole. While sentence length can be calculated by measuring the distance between the first capital letter and full-stop, it is possible to get a sense of how the sentence diverts, tarries, and pauses by looking at mid-sentence punctuation like: colons, semi-colons, and parenthesis. Faulkner is not merely making sentences very long, but using punctuation to stretch out the definition of a sentence, and, in turn, call attention to the punctuation itself. The finality of the period is replaced with the indeterminacy of the unfinished sentence. What is telling about Faulkner's writing is that he does not simply write long sentences throughout his career, but experiments with different punctuation configurations to make this possible. Three salient examples from throughout his career stand out: Mosquitos, Absalom, and Intruder in the Dust. Procedure
+The preceding discusion about sentence length raises an obvious question, What is a long sentence? Is it any sentence above the average in a corpus? If so, how much longer does it need to be to be consider long and not simply longer than usual? At what point, does a long sentence cease being a sentence and instead becomes a string of unpunctuated words? James Joyce famously wrote "the longest sentence" in English in the Penelope chapter of *Ulysses*, but this sentence is not long in the same way a sentence in Faulkner is long. While there is certainly semantic coherence underlying Joyce's string of words, it does not syntactically cohere due to a lack of mid-sentence punctuation. This was rather point, of course, but it is an important distinction to make. Faulkner not only creates long strings of words, but also coordinates and subordinates his clauses through punctuation. This is quite distinct from Joyce. whereas he saw the intervention of punctuation as infelicity to the ineluctable flow of meaning making through language, the sheer profusion of punctuation in Faulkner speaks to the endless way in which meaning splits, divaricates, rejoins and ends in an arbitrary terminus only to continue again. To use two spatial metaphors, The Penelope chapter is a stream, Faulkner's writing is a watershed.  
 
-On the surface, the technical procedure for counting mid-sentence punctuation is not particularly complex. All of Faulkner's texts was broken down into sentences and the each mid-sentence punctuation mark was counted. Since the odds of a mid-sentence punctuation mark go up when there are more words in a sentence, the average number of each punctuation per word was taken for each text. This gives some indication of the central tendency of punctuation marks across the corpus. In short, it provided a window into what is a "normal" number of punctuation marks per word in all of Faulkner's texts. Based on this data it is possible to infer outliers, or data that appears irregular. This procedure is highly interpretive. First, since the data is exclusively about Faulkner's texts, it is hard to know how non-normal his punctuation is relative to other authors. Second, the corpus of novels and collected and uncollected stories itself is heterogeneous. The most salient example is *Requiem for a Nun*, which is written as a play and therefore has a higher number of parenthesis consonant with that form. Likewise, a substantial percentage `r round(short_story_percentage$percent, 0)`% of the texts are short stories. These stories have a slightly shorter average sentence length of `r round(summary_by_type$string_length[2],0)` words versus `r round(summary_by_type$string_length[1], 0)` words in the novels. Including or excluding Requiem for a Nun and the short stories creates a slighlty different mean across the board, which, in turn, sets a different baseline as to what constitutes Faulkner's "normal" writing. Since there are convincing arguments to be made for both scenarios, both were tested for outliers.
+To understand how Faulkner lengthens his sentence it is useful to look at mid-sentence punctuation. While sentence length can be calculated by measuring the distance between the first capital letter and full-stop, it is possible to get a sense of how the sentence diverts, tarries, and pauses by looking at mid-sentence punctuation like: colons, semi-colons, and parenthesis. Faulkner is not merely making sentences very long, but using punctuation to stretch out the definition of a sentence, and, in turn, call attention to the punctuation itself. The finality of the period is replaced with the indeterminacy of the unfinished sentence. What is telling about Faulkner's writing is that he does not simply write long sentences throughout his career, but experiments with different punctuation configurations to make this possible. Arguably, there are any number of texts to would form good examples, but there are three texts that deviate from Faulkner's own writing statistically: Mosquitos, Absalom, and Intruder in the Dust. 
+
+To arrive at these outliers a statistical model of Faulkner's short stories and novels was created. These texts were broken down into sentences and each mid-sentence punctuation mark was counted. Arguably, sentence length and mid-sentence punctuation are postively correlated. As sentences get longer, there is a higher likelihood of finding mid-sentence punctuation. There are some functional limits to this correlation. Modern punctuation tends to function as a syntactical system. There are specific rules that regulate when certain punctuation marks can be used (@Shou 198). As opposed to older forms of punctuation, there tends to be an upper limit to how many times a colon, semi-colon, or parenthesis can appear in a sentence before it starts to violate the basic rules of grammar. For example, one line in *The Mansion* (DATE) has 9 semi-colons and is over 400 words long. It pushes the limits as to how many sub-clauses a reader can reasonably be expected to understand in the same coherent thought. By taking the averages of the number of mid-sentence punctuation marks across all texts, it is possible to look at their distribution. In general, these follow a right-skewed distribution; a bell curve with a long tail. Syntactically, this makes sense. If a sentence contains one colon, it is far less likely that it would also contain a second colon. This likelihood tends to decrease logirithmically, hence the very long tail on the distribution. In order to determine outliers, the log normal value of each variable was taken and plotted on a quintile-quintile plot to test for logarithimic normalcy. With this established, two different outlier tests were run: Rosner's and Adjusted box plot. Each test revealed slightly different outliers. The texts that had multiple outliers stood out. Without going into too many technical details it is safe to say that these statistical tests confirmed what many scholars had already intuited through close reading that the punctuation is odd.
+
+
+
+
+In short, it provided a window into what is a "normal" number of punctuation marks per word in all of Faulkner's texts. Based on this data it is possible to infer outliers, or data that appears irregular. This procedure is highly interpretive. First, since the data is exclusively about Faulkner's texts, it is hard to know how non-normal his punctuation is relative to other authors. Second, the corpus of novels and collected and uncollected stories itself is heterogeneous. The most salient example is *Requiem for a Nun*, which is written as a play and therefore has a higher number of parenthesis consonant with that form. Likewise, a substantial percentage `r round(short_story_percentage$percent, 0)`% of the texts are short stories. These stories have a slightly shorter average sentence length of `r round(summary_by_type$string_length[2],0)` words versus `r round(summary_by_type$string_length[1], 0)` words in the novels. Including or excluding Requiem for a Nun and the short stories creates a slighlty different mean across the board, which, in turn, sets a different baseline as to what constitutes Faulkner's "normal" writing. Since there are convincing arguments to be made for both scenarios, both were tested for outliers.
 
 Generally, the normal distribution for punctuation marks in Faulkner's texts is right-skewed; the curve has a long tail to the right. Intuitively, this makes sense. Unlike grades which follow a normal, bell-shaped distribution, punctuation marks in a sentence do not have a defined upper limit. It is therefore possible to have some texts with a substantially higher frequency of a particular kind of punctuation marks per word. In the same way that it is possible for some people to have a much higher income than the mean income. The common procedure for dealing with right skewed data is to take the natural log and test for a normal distribution. This essentially reduces the distance between x values by scaling them. The resulting data can then be tested for normalcy. This was done statistically with the Shapiro-Wilk normality test and visually with a qq chart. Once normalcy has been confirmed it is possible to test for outliers. While there are plenty of statistical tests for outliers, this is to some extent a subjective practice. Each test has some underlyinig assumptions. That said, using the Rosner test on all of the punctuations revealed three texts that were statistically unusual: Mosquitos had significantly more parenthesis per word than any of the other texts and Absalom, Absalom! had signficantly more parenthesis than other texts. Intruder in the Dust had significantly more colons than all the other texts, but this difference only showed itself when all of the texts were included.
 
