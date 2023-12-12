@@ -118,8 +118,8 @@ all_works_noabbreviation <- all_works_clean_import %>%
   mutate(cleaned = rm_abbreviation(text, replacement = "abbreviationremoved ")) %>%
   mutate(cleaned = str_replace_all(cleaned, "Mr\\.", "Mr ")) %>%
   mutate(cleaned = str_replace_all(cleaned, "Mrs\\.", "Mrs ")) %>%
-  mutate(cleaned = str_replace_all (cleaned, "\\.\\.\\.", "punctellipse ")) %>%
-  mutate(cleaned = str_replace_all (cleaned, "\\.\\s\\.\\s\\.\\s", "punctellipse "))
+  mutate(cleaned = str_replace_all (cleaned, "\\.\\.\\.", " punctellipse ")) %>%
+  mutate(cleaned = str_replace_all (cleaned, "\\.\\s\\.\\s\\.\\s", " punctellipse ")) 
 ```
 
 ```{r}
@@ -128,9 +128,7 @@ secondary_works_abbreviations <- secondary_works_clean %>%
   mutate(cleaned = str_replace_all(cleaned, "Mr\\.", "Mr")) %>%
   mutate(cleaned = str_replace_all(cleaned, "Mrs\\.", "Mrs")) %>%
   mutate(cleaned = str_replace_all (cleaned, "\\.\\.\\.", "punctellipse ")) %>%
-  mutate(cleaned = str_replace_all (cleaned, "\\.\\s\\.\\s\\.\\s", "punctellipse "))
-  mutate(cleaned = str_replace_all (cleaned, "\\.\\.\\.\\.", "punctellipse4 ")) %>%
-  mutate(cleaned = str_replace_all (cleaned, "\\.\\s\\.\\s\\.\\s.\\s", "punctellipse4 "))
+  mutate(cleaned = str_replace_all (cleaned, "\\.\\s\\.\\s\\.\\s", "punctellipse ")) 
 ```
 
 ### Secondary Descriptions
@@ -168,7 +166,7 @@ works_length_noabbreviation <- all_works_noabbreviation_type %>%
   
   mutate (string_length = str_count(sentence, "\\S+")) %>%
   mutate(ellipse = str_count(sentence, "punctellipse"))  %>%
-  mutate(ellipse4 = str_count(sentence, "punctellipse4"))  %>%
+ 
   filter(string_length > 0)
 ```
 
@@ -276,12 +274,11 @@ punctuation_results <- summary_punctuation %>%
 
 ## Sentence length
 
-It does not require computational analysis to understand that Faulkner writes in long sentences. For anyone who has ever taught Faulkner, it is perhaps the most common stumbling block and, indeed, complaint among students. Faulkner experienced this resistance himself during the series of lectures he gave at the University of Virginia, no fewer than 4 participants asked why he wrote with such long sentences (CITE). Quantifying what readers might mean when they say Faulkner's sentences are long is a bit more complex. On average, Faulkner's sentences are only slightly longer at 17 words per sentence than the 16 words per sentence in the Corpus of English Novels (Ihrmark 79). Nor is the high sentence length a feature of all his works. The *Sound and the Fury* is notoriously complex. Nevertheless, at only 10 words per sentence, it uses fewer words per sentence than Hemingway's *The Old Man and the Sea*, which averages 13 (Ihrmark 82). Despite this statistical reality, Faulkner's more verbose style could never be confused with Hemingway's trademark concision. In part, this has to do with the distribution of sentence lengths within each text. The *The Sound and the Fury* may have a lower average word count than *The Old Man and the Sea*, but it also contains one sentence that counts over 4,000 words. Clearly, this is less succinct than Hemingway, and probably most other authors as well. These long sentences, it should be noted, are more of a statistical exception that the rule. The normal distribution for this text, and most of Faulkner's other texts is right-skewed. Meaning that for the most part they tend of have "average"-length sentences interspersed with much longer sentences. In the case of the *Sound and the Fury* roughly 90% of the sentences are 17 words or fewer in length. In this text, and most of Faulkner's other texts (60%), the average sentence length is actually lower than the total average. More succinctly, just as a small share of sentences in each work gives the impression of long sentences. Likewise, within the corpus of Faulkner's writing there are a minority of works that are above average in sentence length. Lengthy sentences are a local feature not a global phenomenon.
+It does not require computational analysis to understand that Faulkner writes in long sentences. For anyone who has ever taught Faulkner, it is perhaps the most common stumbling block and, indeed, complaint among students. Faulkner experienced this resistance himself during the series of lectures he gave at the University of Virginia, no fewer than 4 participants asked why he wrote with such long sentences (CITE). However, quantifying what readers might mean when they say Faulkner's sentences are long is a bit more complex. On average, at 17 words per sentence Faulkner's sentences are only slightly longer than the average 16 words per sentence for a novel in the Corpus of English Novels, which covers writing from 1881 - 1922 (Ihrmark 79) and longer still than the x words in so and so's study for this period. Nor is the slightly higher than average sentence length a feature of all his works. The *Sound and the Fury* is notoriously complex. Nevertheless, at only 10 words per sentence, it uses fewer words on average than Hemingway's *The Old Man and the Sea*, which 13 words per sentence (Ihrmark 82). Despite this statistical reality, Faulkner's more verbose style would never be confused with Hemingway's trademark concision. In part, this has to do with the distribution of sentence lengths within each text. The *The Sound and the Fury* may have a lower average word count than *The Old Man and the Sea*, but it also contains one sentence that counts over 4,000 words. Clearly, this is less succinct than Hemingway, and probably most other authors as well. These long sentences, it should be noted, are more of a statistical exception than the rule. The normal distribution for this text, and most of Faulkner's other texts is heavily right-skewed. Meaning that for the most part they tend of have "average"-length sentences interspersed with much longer sentences. In the case of the *Sound and the Fury* roughly 90% of the sentences are 17 words or fewer in length. In this text, and most of Faulkner's other texts (60%), the average sentence length is actually lower than the total average across the corpus. More succinctly, just as a small share of sentences in each work gives the impression of long sentences. Likewise, within the corpus of Faulkner's writing there are a minority of works that are above average in sentence length. Lengthy sentences are a local feature not a global phenomenon.
 
-Despite statistical indications to the contrary, lengthy sentences are seen as hallmark feature of Faulkner's writing. In part this may be because some of Faulkner's most canonical works feature long sentences, *Go Down, Moses*, *Absalom, Absalom*, "A Rose for Emily", and "Barn Burning". These works are, in a sense, more Faulknerian than a relatively unknown early text like "Elly". Nevertheless, equally canonical works like *The Sound and the Fury*, *Light in August*, and *As I Lay Dying* do not, on average, stand out as being particularly verbose relative to the the general mass of texts written in English at this particular time. Despite these counter indications, it goes against a firmly established scholarly tradition based on Faulkner's own statements and, indeed, common sense, to argue that lengthy sentences aren't Faulkner's particular metier. Instead, to understand why Faulkner's sentences, for lack of a better word, feel long it is informative to look at their internal structure. 
+Despite statistical indications to the contrary, lengthy sentences are seen as hallmark feature of Faulkner's writing. In part this may be because some of Faulkner's most canonical works feature long sentences, *Go Down, Moses*, *Absalom, Absalom*, "A Rose for Emily", and "Barn Burning". These works are, in a sense, more Faulknerian than a relatively unknown early text like "Elly". Nevertheless, equally canonical works like *The Sound and the Fury*, *Light in August*, and *As I Lay Dying* do not, on average, stand out as being particularly verbose relative to the the general mass of texts written in English at this particular time. Despite these counter indications, it goes against a firmly established scholarly tradition based on Faulkner's own statements and, indeed, common sense, to argue that lengthy sentences aren't Faulkner's particular metier. Instead, to understand why Faulkner's sentences, for lack of a better word, feel long it is informative to look at their internal structure.
 
-### Internal structure
-
+### Internal structure of sentences
 
 ```{r}
 average_sentence_length <- works_punctuation_abbreviation %>% 
@@ -303,9 +300,6 @@ percent_long <- long_sentences_sf/sentences_sf
 summary(works_punctuation_abbreviation %>% 
   filter(code=="SF"))
 ```
-
-
-
 
 ### String Length
 
@@ -768,7 +762,24 @@ all_outliers <- punctuation_results_full_table %>%
   rowwise() %>% 
   mutate(outlier = sum(c_across(where(is.numeric)), na.rm = T)) %>% 
   mutate(outlier = ifelse(outlier>0,TRUE,FALSE)) %>% 
-  filter(outlier == TRUE)
+  filter(outlier == TRUE)  
+
+```
+
+```{r}
+all_outliers %>% 
+    select(5:18) %>% 
+    is.na %>% 
+    `!` %>% 
+    rowSums
+```
+
+```{r}
+all_outliers %>% 
+    select(5:18) %>% 
+    is.na %>% 
+    `!` %>% 
+    rowSums
 ```
 
 ```{r}
@@ -788,14 +799,27 @@ all_outliers <- punctuation_results_full_table %>%
 
 ## Extending the Sentences: Pauses and Such
 
-The preceding discusion about sentence length raises an obvious question, What is a long sentence? Is it any sentence above the average in a corpus? If so, how much longer does it need to be to be consider long and not simply longer than usual? At what point, does a long sentence cease being a sentence and instead becomes a string of unpunctuated words? James Joyce famously wrote "the longest sentence" in English in the Penelope chapter of *Ulysses*, but this sentence is not long in the same way a sentence in Faulkner is long. While there is certainly semantic coherence underlying Joyce's string of words, it does not syntactically cohere due to a lack of mid-sentence punctuation. This was rather point, of course, but it is an important distinction to make. Faulkner not only creates long strings of words, but also coordinates and subordinates his clauses through punctuation. This is quite distinct from Joyce. whereas he saw the intervention of punctuation as infelicity to the ineluctable flow of meaning making through language, the sheer profusion of punctuation in Faulkner speaks to the endless way in which meaning splits, divaricates, rejoins and ends in an arbitrary terminus only to continue again. To use two spatial metaphors, The Penelope chapter is a stream, Faulkner's writing is a watershed.  
+The preceding discussion about sentence length raises an obvious question: What is a long sentence? Is it any sentence above the average in a corpus? If so, how much longer does it need to be to be consider long and not simply longer than usual? At what point, does a long sentence cease being a sentence and instead becomes a string of unpunctuated words? James Joyce famously wrote "the longest sentence" in English in the Penelope chapter of *Ulysses*, but this sentence is not long in the same way a sentence in Faulkner is long. While there is certainly semantic coherence underlying Joyce's string of words, it does not syntactically cohere due to a lack of mid-sentence punctuation. This was rather point, of course, but it is an important distinction to make. Faulkner not only creates long strings of words, but also coordinates and subordinates his clauses through punctuation. This is quite distinct from Joyce. Whereas he saw the intervention of punctuation as infelicity to the ineluctable flow of meaning making through language in the Penelope episode, the sheer profusion of punctuation in Faulkner speaks to the endless way in which meaning splits, divaricates, rejoins and ends in an arbitrary terminus only to continue again. To use two spatial metaphors, The Penelope chapter is a stream, Faulkner's writing is a watershed.
 
-To understand how Faulkner lengthens his sentence it is useful to look at mid-sentence punctuation. While sentence length can be calculated by measuring the distance between the first capital letter and full-stop, it is possible to get a sense of how the sentence diverts, tarries, and pauses by looking at mid-sentence punctuation like: colons, semi-colons, and parenthesis. Faulkner is not merely making sentences very long, but using punctuation to stretch out the definition of a sentence, and, in turn, call attention to the punctuation itself. The finality of the period is replaced with the indeterminacy of the unfinished sentence. What is telling about Faulkner's writing is that he does not simply write long sentences throughout his career, but experiments with different punctuation configurations to make this possible. Arguably, there are any number of texts to would form good examples, but there are three texts that deviate from Faulkner's own writing statistically: Mosquitos, Absalom, and Intruder in the Dust. 
+To understand how Faulkner lengthens his sentences it is useful to look at mid-sentence punctuation. While sentence length can be calculated by measuring the distance between the first capital letter and full-stop, it is possible to get a sense of how the sentence diverts, tarries, and pauses by looking at mid-sentence punctuation like: colons, semi-colons, and parenthesis. Faulkner is not merely making sentences very long, but using punctuation to stretch out the definition of a sentence, and, in turn, call attention to the punctuation itself. The finality of the period is replaced with the indeterminacy of the unfinished sentence. What is telling about Faulkner's writing is that he does not simply write long sentences throughout his career, but experiments with different punctuation configurations to make this possible. Arguably, there are any number of texts to would form good examples, but there are three salient texts that deviate from Faulkner's own writing statistically: "Dry September", Absalom, and Intruder in the Dust.
 
-To arrive at these outliers a statistical model of Faulkner's short stories and novels was created. These texts were broken down into sentences and each mid-sentence punctuation mark was counted. Arguably, sentence length and mid-sentence punctuation are postively correlated. As sentences get longer, there is a higher likelihood of finding mid-sentence punctuation. There are some functional limits to this correlation. Modern punctuation tends to function as a syntactical system. There are specific rules that regulate when certain punctuation marks can be used (@Shou 198). As opposed to older forms of punctuation, there tends to be an upper limit to how many times a colon, semi-colon, or parenthesis can appear in a sentence before it starts to violate the basic rules of grammar. For example, one line in *The Mansion* (DATE) has 9 semi-colons and is over 400 words long. It pushes the limits as to how many sub-clauses a reader can reasonably be expected to understand in the same coherent thought. By taking the averages of the number of mid-sentence punctuation marks across all texts, it is possible to look at their distribution. In general, these follow a right-skewed distribution; a bell curve with a long tail. Syntactically, this makes sense. If a sentence contains one colon, it is far less likely that it would also contain a second colon. This likelihood tends to decrease logirithmically, hence the very long tail on the distribution. In order to determine outliers, the log normal value of each variable was taken and plotted on a quintile-quintile plot to test for logarithimic normalcy. With this established, two different outlier tests were run: Rosner's and Adjusted box plot. Each test revealed slightly different outliers. The texts that had multiple outliers stood out. Without going into too many technical details it is safe to say that these statistical tests confirmed what many scholars had already intuited through close reading that the punctuation is odd.
+To arrive at these outliers, a statistical model of Faulkner's short stories and novels was created. The texts were broken down into sentences and each mid-sentence punctuation mark was counted. Intuitively, sentence length and mid-sentence punctuation are positively correlated. As sentences get longer, there is a higher likelihood of finding mid-sentence punctuation. There are some functional limits to this correlation, however. Modern punctuation tends to function as a syntactical system. There are specific rules that regulate when certain punctuation marks can be used (@Shou 198). As opposed to older forms of punctuation, there tends to be an upper limit to how many times a colon, semi-colon, or parenthesis can appear in a sentence before it starts to violate the basic rules of grammar. For example, one line in *The Mansion* (DATE) has 9 semi-colons and is over 400 words long. It pushes the limits as to how many subclauses a reader can reasonably be expected to understand in the same ostensibly coherent thought delimited by a period. By taking the averages of the number of mid-sentence punctuation marks across all texts, it is possible to look at their distribution. In general, these follow a right-skewed distribution; a bell curve with a long tail. Syntactically, this makes sense. If a sentence contains one colon, it is far less likely that it would also contain a second colon. This likelihood tends to decrease precipitiously, hence the very long tail on the distribution. Determining when a value on that tail becomes an "outlier" is a matter of interpretation and there is no singular test that can determine this. In this instance, the log normal value of each variable was taken and plotted on a quintile-quintile plot to test for logarithimic normalcy. With this established, two different outlier tests were run: Rosner's and Adjusted box plot. Each test revealed slightly different outliers. The texts that had multiple outliers stood out. Without going into too many technical details it is safe to say that these statistical tests confirmed what many scholars had already intuited through close reading that the punctuation in these texts is odd.
 
+"Dry September", Absalom, and Intruder stood out for having more ellipses, parentheses, and colons respectively than other texts. To give some extreme examples, one sentence in *Intruder in the Dust* is over 1600 words long and features 18 colons. Likewise, Absalom, has a sentence that is over 1000 words long and features 18 parenthesis. "Dry September" is more an unusual example, it has more ellipses per sentence than expected for a work of that length, but uses relatively few words per sentence. This contradiction speaks to the stories central thematic: the lynching of Will Mayes, an innocent Black man, over town rumors about him assaulting a White woman. The ellipses are exclusively contained to when characters are speaking and omit important details. It is a way for Faulkner to continue the sentence through other means. These few examples do not touch upon the challenge SF represents. After all, some of the long sentences in SF are actually clauses that start with capital letter, but are not closed by a period. It raises the question as to whether these are sentences or clauses.
 
+These short examples demonstrate that Faulkner's texts are marked by long sentences, but the means of achieving this length is not consistent and it is something with which he experiments with throughout this career.
 
+Onto the next section
+
+```{r}
+
+mosquito_sentences <- works_punctuation_abbreviation %>% 
+  filter(title == "mosquitoes")
+
+mosquito_sentence_ellipse <- mean(mosquito_sentences$ellipse>0)
+  
+  
+```
 
 In short, it provided a window into what is a "normal" number of punctuation marks per word in all of Faulkner's texts. Based on this data it is possible to infer outliers, or data that appears irregular. This procedure is highly interpretive. First, since the data is exclusively about Faulkner's texts, it is hard to know how non-normal his punctuation is relative to other authors. Second, the corpus of novels and collected and uncollected stories itself is heterogeneous. The most salient example is *Requiem for a Nun*, which is written as a play and therefore has a higher number of parenthesis consonant with that form. Likewise, a substantial percentage `r round(short_story_percentage$percent, 0)`% of the texts are short stories. These stories have a slightly shorter average sentence length of `r round(summary_by_type$string_length[2],0)` words versus `r round(summary_by_type$string_length[1], 0)` words in the novels. Including or excluding Requiem for a Nun and the short stories creates a slighlty different mean across the board, which, in turn, sets a different baseline as to what constitutes Faulkner's "normal" writing. Since there are convincing arguments to be made for both scenarios, both were tested for outliers.
 
