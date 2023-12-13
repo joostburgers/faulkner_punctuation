@@ -43,7 +43,7 @@ Faulkner's corpus is quite heterogeneous, and consists of novels, short stories,
 
 ### Preprocess Data
 
-```{r load_data }
+```{r load_data, eval=FALSE, include=FALSE}
 #| include: false
 
 all_works <-
@@ -62,7 +62,7 @@ all_works <-
 
 ```
 
-```{r}
+```{r eval=FALSE, include=FALSE}
 secondary_works <- list.files(file.path("secondary_authors"), full.names = TRUE, pattern = "*.txt") %>% #grab a list of all the files with .txt extension
   #the full.names value needs to set to TRUE to get the full path. For some reason you will get a "permission denied" error if you do not do this.
   map_df(~ tibble(  #the map function performs the same command on all parts of the data set. In this case the .txt files
@@ -77,7 +77,7 @@ secondary_works <- list.files(file.path("secondary_authors"), full.names = TRUE,
   )) 
 ```
 
-```{r normalize_punctuation}
+```{r normalize_punctuation, eval=FALSE, include=FALSE}
 #| include: false
 
 #This helps normalize how quote marks are used in the text.
@@ -87,7 +87,7 @@ all_works_clean <- all_works %>%
                        TRUE))
 ```
 
-```{r}
+```{r eval=FALSE, include=FALSE}
 secondary_works_clean <- secondary_works %>%
   mutate(text = gsub("[,\\!\\?\\.](?=[^’‘]*’[\\s—-])", " ", text, perl =
                        TRUE))
@@ -95,7 +95,7 @@ secondary_works_clean <- secondary_works %>%
 
 ### Import Data
 
-```{r export_CSV}
+```{r export_CSV, eval=FALSE, include=FALSE}
 #| include: false
 
 #saved version of the preprocessing to help improve spead on repeat runs.
@@ -123,12 +123,12 @@ all_works_noabbreviation <- all_works_clean_import %>%
 ```
 
 ```{r}
-secondary_works_abbreviations <- secondary_works_clean %>% 
-  mutate(cleaned = rm_abbreviation(text, replacement = "abbreviationremoved")) %>%
-  mutate(cleaned = str_replace_all(cleaned, "Mr\\.", "Mr")) %>%
-  mutate(cleaned = str_replace_all(cleaned, "Mrs\\.", "Mrs")) %>%
-  mutate(cleaned = str_replace_all (cleaned, "\\.\\.\\.", "punctellipse ")) %>%
-  mutate(cleaned = str_replace_all (cleaned, "\\.\\s\\.\\s\\.\\s", "punctellipse ")) 
+# secondary_works_abbreviations <- secondary_works_clean %>% 
+#   mutate(cleaned = rm_abbreviation(text, replacement = "abbreviationremoved")) %>%
+#   mutate(cleaned = str_replace_all(cleaned, "Mr\\.", "Mr")) %>%
+#   mutate(cleaned = str_replace_all(cleaned, "Mrs\\.", "Mrs")) %>%
+#   mutate(cleaned = str_replace_all (cleaned, "\\.\\.\\.", "punctellipse ")) %>%
+#   mutate(cleaned = str_replace_all (cleaned, "\\.\\s\\.\\s\\.\\s", "punctellipse ")) 
 ```
 
 ### Secondary Descriptions
@@ -171,19 +171,19 @@ works_length_noabbreviation <- all_works_noabbreviation_type %>%
 ```
 
 ```{r}
-secondary_length <- secondary_works_abbreviations %>% 
-                     group_by(title, date) %>%
-  unnest_regex(sentence, cleaned, "[.?!]") %>%
-  
-  mutate (string_length = str_count(sentence, "\\S+")) %>%
-  mutate(ellipse = str_count(sentence, "punctellipse"))  %>%
-  filter(string_length > 0)
+# secondary_length <- secondary_works_abbreviations %>% 
+#                      group_by(title, date) %>%
+#   unnest_regex(sentence, cleaned, "[.?!]") %>%
+#   
+#   mutate (string_length = str_count(sentence, "\\S+")) %>%
+#   mutate(ellipse = str_count(sentence, "punctellipse"))  %>%
+#   filter(string_length > 0)
 ```
 
 ```{r}
-secondary_overview <- secondary_length %>% 
-                      group_by(title) %>% 
-                      summarise(average_length = mean(string_length))
+# secondary_overview <- secondary_length %>% 
+#                       group_by(title) %>% 
+#                       summarise(average_length = mean(string_length))
 ```
 
 ```{r count_pauses}
@@ -381,10 +381,10 @@ summary_punctuation %>%
 #### QQ Plot
 
 ```{r ellipse_distribution}
-ellipse_shapiro <- shapiro.test(log1p(summary_punctuation$ellipse))
+ellipse_shapiro <- shapiro.test(1/summary_punctuation$ellipse)
 
 ggqqplot(
-  log1p(summary_punctuation$ellipse),
+  1/summary_punctuation$ellipse,
   xlab = "Text",
   title = paste(
     "Ellipse Distribution",
@@ -398,11 +398,11 @@ ggqqplot(
 
 ```{r ellipse_rosner}
 ellipse_outlier <-
-  boxplot.stats(log1p(summary_punctuation$ellipse))$out
+  boxplot.stats(summary_punctuation$ellipse)$out
 ellipse_outlier_rownumbers <-
-  which(log1p(summary_punctuation$ellipse) %in% c(ellipse_outlier))
+  which((summary_punctuation$ellipse) %in% c(ellipse_outlier))
 
-ellipse_test <- rosnerTest(log1p(summary_punctuation$ellipse),
+ellipse_test <- rosnerTest((summary_punctuation$ellipse),
                            k = length(ellipse_outlier_rownumbers))
 ellipse_outlier_obs <-  ellipse_test$all.stats %>%
   filter(Outlier == TRUE) %>%
@@ -420,7 +420,7 @@ ellipse_outlier_result <-
 
 ```{r ellipse_adjusted_box}
 ellipse_adjusted_boxplot <-
-  boxB(summary_punctuation$ellipse, method = "adjbox")
+  boxB(1/summary_punctuation$ellipse, method = "adjbox")
 
 ellipse_boxplot_outlier_result <-
   summary_punctuation[ellipse_adjusted_boxplot$outliers, ] %>%
@@ -626,7 +626,7 @@ ggplot(aes(x = colon)) +
 #### QQ Plot
 
 ```{r}
-colon_shapiro <- shapiro.test(log1p(summary_punctuation$colon))
+colon_shapiro <- shapiro.test(1/summary_punctuation$colon))
 
 ggqqplot(log1p(summary_punctuation$colon), xlab = "Text", title = paste("Colons Per Word", "Shapiro P value < ", round(colon_shapiro$p.value,6))
          )
@@ -762,24 +762,25 @@ all_outliers <- punctuation_results_full_table %>%
   rowwise() %>% 
   mutate(outlier = sum(c_across(where(is.numeric)), na.rm = T)) %>% 
   mutate(outlier = ifelse(outlier>0,TRUE,FALSE)) %>% 
-  filter(outlier == TRUE)  
+  filter(outlier == TRUE)  %>% 
+  mutate_at(c(8,11), as.numeric)
 
 ```
 
 ```{r}
-all_outliers %>% 
-    select(5:18) %>% 
+all_outliers_count <- all_outliers %>% 
+    select(5:18) %>%  
     is.na %>% 
     `!` %>% 
     rowSums
+
+all_outliers_count <- all_outliers %>% 
+  add_column(all_outliers_count)
+    
 ```
 
 ```{r}
-all_outliers %>% 
-    select(5:18) %>% 
-    is.na %>% 
-    `!` %>% 
-    rowSums
+
 ```
 
 ```{r}
@@ -799,11 +800,15 @@ all_outliers %>%
 
 ## Extending the Sentences: Pauses and Such
 
-The preceding discussion about sentence length raises an obvious question: What is a long sentence? Is it any sentence above the average in a corpus? If so, how much longer does it need to be to be consider long and not simply longer than usual? At what point, does a long sentence cease being a sentence and instead becomes a string of unpunctuated words? James Joyce famously wrote "the longest sentence" in English in the Penelope chapter of *Ulysses*, but this sentence is not long in the same way a sentence in Faulkner is long. While there is certainly semantic coherence underlying Joyce's string of words, it does not syntactically cohere due to a lack of mid-sentence punctuation. This was rather point, of course, but it is an important distinction to make. Faulkner not only creates long strings of words, but also coordinates and subordinates his clauses through punctuation. This is quite distinct from Joyce. Whereas he saw the intervention of punctuation as infelicity to the ineluctable flow of meaning making through language in the Penelope episode, the sheer profusion of punctuation in Faulkner speaks to the endless way in which meaning splits, divaricates, rejoins and ends in an arbitrary terminus only to continue again. To use two spatial metaphors, The Penelope chapter is a stream, Faulkner's writing is a watershed.
+The preceding discussion about sentence length raises an obvious question: What is a long sentence? Is it any sentence above the average in a corpus? If so, how much longer does it need to be to be consider long and not simply longer than usual? At what point, does a string of words grammatically cease to be sentence? James Joyce famously wrote "the longest sentence" in English in the Penelope chapter of *Ulysses*, but this sentence is not long in the same way a sentence in Faulkner is long. While there is certainly semantic coherence underlying Joyce's string of words, the lack of mid-sentence punctuation makes it grammatically incorrect if not also syntacitacticly incoherent. This was rather point, of course, but it is an important distinction to make. Faulkner not only creates long strings of words, but also coordinates and subordinates his clauses through punctuation. Thus, whereas Joyce saw the intervention of punctuation as an infelicity to the ineluctable flow of meaning making through language in the Penelope episode, the sheer profusion of punctuation in Faulkner speaks to the endless way in which meaning splits, divaricates, rejoins and ends in an arbitrary terminus only to continue again. To use two spatial metaphors, The Penelope chapter is a stream, Faulkner's writing is a watershed.
 
-To understand how Faulkner lengthens his sentences it is useful to look at mid-sentence punctuation. While sentence length can be calculated by measuring the distance between the first capital letter and full-stop, it is possible to get a sense of how the sentence diverts, tarries, and pauses by looking at mid-sentence punctuation like: colons, semi-colons, and parenthesis. Faulkner is not merely making sentences very long, but using punctuation to stretch out the definition of a sentence, and, in turn, call attention to the punctuation itself. The finality of the period is replaced with the indeterminacy of the unfinished sentence. What is telling about Faulkner's writing is that he does not simply write long sentences throughout his career, but experiments with different punctuation configurations to make this possible. Arguably, there are any number of texts to would form good examples, but there are three salient texts that deviate from Faulkner's own writing statistically: "Dry September", Absalom, and Intruder in the Dust.
+To understand how Faulkner lengthens his sentences it is useful to look at mid-sentence punctuation. While sentence length can be calculated by measuring the distance between the first capital letter and full-stop, it is possible to get a sense of how the sentence diverts, tarries, and pauses by looking at mid-sentence punctuation like: colons, ellipses, and parenthesis. Faulkner is not merely making sentences very long, but using punctuation to stretch out the definition of a sentence, and, in turn, call attention to the punctuation itself. The finality of the period is replaced with the indeterminacy of the unfinished sentence. What is telling about Faulkner's writing is that he does not simply write long sentences throughout his career, but experiments with different punctuation configurations to make this possible. Arguably, any number of texts serve as good examples, but there are three salient texts that deviate from Faulkner's own writing statistically: "Dry September", Absalom, and Intruder in the Dust.
 
-To arrive at these outliers, a statistical model of Faulkner's short stories and novels was created. The texts were broken down into sentences and each mid-sentence punctuation mark was counted. Intuitively, sentence length and mid-sentence punctuation are positively correlated. As sentences get longer, there is a higher likelihood of finding mid-sentence punctuation. There are some functional limits to this correlation, however. Modern punctuation tends to function as a syntactical system. There are specific rules that regulate when certain punctuation marks can be used (@Shou 198). As opposed to older forms of punctuation, there tends to be an upper limit to how many times a colon, semi-colon, or parenthesis can appear in a sentence before it starts to violate the basic rules of grammar. For example, one line in *The Mansion* (DATE) has 9 semi-colons and is over 400 words long. It pushes the limits as to how many subclauses a reader can reasonably be expected to understand in the same ostensibly coherent thought delimited by a period. By taking the averages of the number of mid-sentence punctuation marks across all texts, it is possible to look at their distribution. In general, these follow a right-skewed distribution; a bell curve with a long tail. Syntactically, this makes sense. If a sentence contains one colon, it is far less likely that it would also contain a second colon. This likelihood tends to decrease precipitiously, hence the very long tail on the distribution. Determining when a value on that tail becomes an "outlier" is a matter of interpretation and there is no singular test that can determine this. In this instance, the log normal value of each variable was taken and plotted on a quintile-quintile plot to test for logarithimic normalcy. With this established, two different outlier tests were run: Rosner's and Adjusted box plot. Each test revealed slightly different outliers. The texts that had multiple outliers stood out. Without going into too many technical details it is safe to say that these statistical tests confirmed what many scholars had already intuited through close reading that the punctuation in these texts is odd.
+To determine which of Faulkner's texts have punctuation at variance with the corpus more generally,a statistical model of Faulkner's short stories and novels was created. The play, *A Requiem for a Nun* was excluded from this analysis, punctuation patterns distorted the average. With this smaller corpus, the texts were broken down into sentences and each mid-sentence punctuation mark was counted. Intuitively, sentence length and mid-sentence punctuation are positively correlated. As sentences get longer, there is a higher likelihood of finding mid-sentence punctuation. There are some functional limits to this correlation, however. Modern punctuation tends to function as a syntactical system that regulates the number of certain punctuation marks that can be used (@Shou 198). This is particularly true of colons, semi-colons, and parenthesis. For example, one line in *The Mansion* (1959) has 9 semi-colons and is over 400 words long. It pushes the limits as to how many independent clauses a reader can reasonably be expected to understand in the same ostensibly coherent thought delimited by a period. 
+
+By taking the averages of the number of mid-sentence punctuation marks across all texts, it is possible to look at their distribution. In general, these follow a right-skewed distribution; a bell curve with a long tail. Syntactically, this makes sense. If a sentence contains one colon, it is far less likely that it would also contain a second colon. This likelihood tends to decrease precipitously, hence the very long tail in the distribution. Determining when a value on that tail becomes an "outlier" is a matter of interpretation, and there is no singular test that can determine this (CITE). As the distance between the mean and the highest value was quite far apart, the skewness of the distribution was corrected for by either taking the inverse or the log of each of the values.  Each result was then fitted onto a quantile-quantile plot to test for normal distribution. Using these distributions, two different tests were run to test for outliers, Rosner's and the  Rosner's and Adjusted box plot developed by SO AND SO. The tests revealed slightly different outliers, but on the whole they revealed an inconsistent use of mid-sentence punctuation across the corpus. That is, Faulkner uses some mid-sentence punctuation in some texts more than others. This suggests some measure of experimentation with how he is creating long sentences. If he were using only one particular technique, for example, like the string of independent clauses separated by a semi-colon, the other mid-sentence punctuation should remain fairly consistent and not have works that average far more other punctuation marks. 
+
+Indeed, it is clear to see from the punctuation in these texts how different techniques are being instrumentalized.
 
 "Dry September", Absalom, and Intruder stood out for having more ellipses, parentheses, and colons respectively than other texts. To give some extreme examples, one sentence in *Intruder in the Dust* is over 1600 words long and features 18 colons. Likewise, Absalom, has a sentence that is over 1000 words long and features 18 parenthesis. "Dry September" is more an unusual example, it has more ellipses per sentence than expected for a work of that length, but uses relatively few words per sentence. This contradiction speaks to the stories central thematic: the lynching of Will Mayes, an innocent Black man, over town rumors about him assaulting a White woman. The ellipses are exclusively contained to when characters are speaking and omit important details. It is a way for Faulkner to continue the sentence through other means. These few examples do not touch upon the challenge SF represents. After all, some of the long sentences in SF are actually clauses that start with capital letter, but are not closed by a period. It raises the question as to whether these are sentences or clauses.
 
