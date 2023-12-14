@@ -401,19 +401,29 @@ ggqqplot(
 #### Rosner Test
 
 ```{r ellipse_rosner}
-ellipse_outlier <-
-  boxplot.stats(summary_punctuation$ellipse)$out
-ellipse_outlier_rownumbers <-
-  which((summary_punctuation$ellipse) %in% c(ellipse_outlier))
+#I tried working with the inverse here, but got mixed results. It pulls out all the low observations as unusual instead of simply seeing them as zero. It looks like both with the lognormal and the regular the top still clusters as outliers. 
 
-ellipse_test <- rosnerTest((summary_punctuation$ellipse),
+ellipse_inverse <- summary_punctuation %>% 
+                  mutate(ellipse = ellipse^-1)
+
+
+
+ellipse_no_zero <- summary_punctuation %>% 
+                    mutate(ellipse = 1/ellipse) %>% 
+                    mutate(ellipse = ifelse(ellipse == "Inf", 0,ellipse))
+ellipse_outlier <-
+  boxplot.stats(ellipse_no_zero$ellipse)$out
+ellipse_outlier_rownumbers <-
+  which((ellipse_no_zero$ellipse) %in% c(ellipse_outlier))
+
+ellipse_test <- rosnerTest((ellipse_no_zero$ellipse),
                            k = length(ellipse_outlier_rownumbers))
 ellipse_outlier_obs <-  ellipse_test$all.stats %>%
   filter(Outlier == TRUE) %>%
   select(Obs.Num)
 
 ellipse_outlier_result <-
-  summary_punctuation[ellipse_outlier_obs$Obs.Num, ] %>%
+  ellipse_no_zero[ellipse_outlier_obs$Obs.Num, ] %>%
   ungroup() %>%
   select(title, ellipse)
 
@@ -424,7 +434,7 @@ ellipse_outlier_result <-
 
 ```{r ellipse_adjusted_box}
 ellipse_adjusted_boxplot <-
-  boxB(1/summary_punctuation$ellipse, method = "adjbox")
+  boxB(ellipse_no_zero$ellipse, method = "adjbox")
 
 ellipse_boxplot_outlier_result <-
   summary_punctuation[ellipse_adjusted_boxplot$outliers, ] %>%
@@ -433,6 +443,24 @@ ellipse_boxplot_outlier_result <-
 
 
 ```
+
+
+
+```{r}
+
+#Simple test to verify the most numerous result. As suspected, the top 5 are somewhat unexpected.
+
+summary_punctuation %>% 
+  ungroup() %>% 
+  slice_max(ellipse,n=10) %>% 
+  
+  ggplot( aes(x=title, y=ellipse)) + 
+  geom_bar(stat = "identity")
+
+
+```
+
+
 
 ### Comma
 
@@ -814,7 +842,8 @@ By taking the averages of the number of mid-sentence punctuation marks across al
 
 Three texts provide useful insights. *Absalom, Absalom*, and *Intruder in the Dust*, and "Dry September" all stood out for being outliers. As one of Faulkner's most challenging texts, it is unsurprising that the punctation patterns in *Absalom, Absalom!* diverge from the corpus. Averaging around 50 words per sentence, the text is marked by a heavy use of parentheses. Thus, a sentence will be interupted by parenthetical statements, which in themselves are not usually sentences, leading to sentences of extraordinary length. In one sentence, he uses 9 parenthetical statements as a running commentary on the main sentence (AA 124-127). Some of these parentheticals are themselves several lines. All of this is complicated by the fact that Chapter 6 is itself entirely surrounded by parentheses. As a result, the parentheses in this sentence are actually nested within surrounding parentheses. This nesting does continues throughout the Chapter and at some point the the word Quentin is nested 4 levels deep. That is, as an aside to an aside to an aside. Not only are Faulkner's sentences very long in Absalom, Absalom! they are also deep. Indeed, the entire novel counts over 1,200 parentheses.
 
-In a slightly different fashion, Faulkner instrumentalizes colons in *Intruder in the Dust* to blank. To give some extreme examples, one sentence in *Intruder in the Dust* is over 1600 words long and features 18 colons. The sentence, which for practical reasons of length cannot be quoted, deployes colons as means to concatenate thoughts. 
+In a slightly different fashion, Faulkner instrumentalizes colons in *Intruder in the Dust* to blank. To give some extreme examples, one sentence in *Intruder in the Dust* is over 1600 words long and features 18 colons. The sentence deploys colons as a clausal adjunct. Nunberg labels this phenomenon colon-expansion, whereby the content following the colon expands or elaborates on the preceding clause (Nunberg 30). Importantly, he points out that there are only two contraints to a colon expansion. First, there is a semantic limit to the extent to which something can be elaborated, and, two, colon-expansions cannot themselves contain other colon-expansions (Nunberg 30-31). Faulkner violates the former by dint of the latter. Each sentence dialates in meaning as he adds on more clausal adjuncts and elaborations. While it is impractical to quote the sentence in its entirety some of the connections between the various colons do a good job of capturing this effect: 
+        Because he was free: in bed: in the cool familliar room...about ten of them: with rage...and fury: any white man...:Youngest of a family of six. (34)
 
 "Dry September" is more an unusual example, it has more ellipses per sentence than expected for a work of that length, but uses relatively few words per sentence. This contradiction speaks to the stories central thematic: the lynching of Will Mayes, an innocent Black man, over town rumors about him assaulting a White woman. The ellipses are exclusively contained to when characters are speaking and omit important details. It is a way for Faulkner to continue the sentence through other means. These few examples do not touch upon the challenge SF represents. After all, some of the long sentences in SF are actually clauses that start with capital letter, but are not closed by a period. It raises the question as to whether these are sentences or clauses.
 
