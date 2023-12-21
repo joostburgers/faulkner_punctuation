@@ -1017,6 +1017,47 @@ raceclassgender_demographic_summary <-
 
 ```
 
+### Checking for normalcy
+
+```{r}
+demographics_punctuation %>%
+  ggplot(aes(x = white_percent)) +
+  geom_histogram(aes(y = ..density..),
+                 colour = "black",
+                 fill = "white") +
+  geom_density(alpha = .2, fill = "#FF6666") +
+  ggtitle("comma Distribution")
+```
+
+```{r}
+demographics_punctuation %>%
+  ggplot(aes(x = male_percent)) +
+  geom_histogram(aes(y = ..density..),
+                 colour = "black",
+                 fill = "white") +
+  geom_density(alpha = .2, fill = "#FF6666") +
+  ggtitle("comma Distribution")
+```
+
+
+
+```{r demographic_summary}
+demographic_summary_total <- demographics_punctuation %>% 
+            ungroup() %>% 
+            summarize_all(mean) %>% 
+            select(white_percent:male_percent)
+          
+```
+
+```{r}
+demographic_summary_rcg_total <- raceclassgender_demographic_summary %>% 
+            ungroup() %>% 
+            summarize_all(mean) 
+
+```
+
+
+
 ```{r punctuation_demographics}
 #Each punctuation mark joined by race, class, and gender.
 
@@ -1036,6 +1077,22 @@ correlations_string_length_rcg_all <-
                                                  "pearson"))) %>%
   pivot_longer(starts_with("all_"), names_to = "types") %>%
   filter(value > .2 | value < -.2)
+```
+
+
+```{r}
+target_column = "string_length"
+
+
+#stuck on this problem can't figure out how to create a correlation table. 
+cor_results <- demographics_punctuation_raceclassgender %>%
+  ungroup() %>% 
+  select(-target_column) %>% 
+  select(11:50) %>% # Exclude the target column from the analysis
+  summarise_all(list(cor = ~ cor(., demographics_punctuation_raceclassgender[[target_column]]))) %>% 
+  gather(key = "variable", value = "correlation") %>% 
+  mutate(p_value = across(where(is.numeric(),~ cor.test(demographics_punctuation_raceclassgender[[target_column]], demographics_punctuation_raceclassgender[[.]], method = "pearson")$p.value)))
+
 ```
 
 
@@ -1074,9 +1131,13 @@ key_demographics <- demographics_punctuation_raceclassgender %>%
 
 When Faulkner is asked about his use of long sentences at the Virginia Colleges Conference in 1957, he claims that there is no such thing as "was" because the past is pat of "every man, every woman, at every moment". This aesthetic that attempts to get "his [a character in a story] past and possibly his future into the instant in which he does something" ( Faulkner at Virginia). On the surface, this has a universalist appeal: men, women, and everyone is the "sum" of their past. Yet, if this were truly universal long-sentences would be equally distributed among different types of characters in the corpus. 
 
-Understand how the long sentence may or may not apply to certain characters requires knowing what type of characters are in what specific texts. Fortuntately, the *Digital Yoknapatawpha* project has at least some of this data available. Created with the mission to encode every character, location, and event in Faulkner's Yoknapatawpha fiction, *DY* represents a rich database of every character in every event in every text that takes place in Yoknapatawpha. Since this database focuses exclusively on the 14 novels and 54 short stories that takes place in Yoknapatawpha, it excludes roughly `r round(dy_corpus$percent[2],0)`% of the Faulkner's writing in novels and short stories. This caveat aside, the database still represents the majority of Faulkner's writing. 
+Understand how the long sentence may or may not apply to certain characters requires knowing what type of characters are in what specific texts. Fortuntately, the *Digital Yoknapatawpha* project has at least some of this data available. Created with the mission to encode every character, location, and event in Faulkner's Yoknapatawpha fiction, *DY* represents a rich database of every character in every event in every text that takes place in Yoknapatawpha. The database has been built by over a decade of peer-reviewed data entry by a team of over 30 Faulkner experts, with each of the thousands of records adhering to strict editorial principles. All data entry for the database was manually performed, which leaves room for human error and a variance in interpretations, but the continuous cycles of peer-review have kept variances to a minimum. The database focuses exclusively on the 14 novels and 54 short stories that takes place in Yoknapatawpha, and excludes roughly `r round(dy_corpus$percent[2],0)`% of the Faulkner's writing in novels and short stories. This caveat aside, the database still represents the majority of Faulkner's writing. In *DY* each event is any time a character or group of characters is present or mentioned at a specific location for a limited duration of time. Each character, in turn, is identified by different characteristics, race, class, gender, rank and other important attributes. By calculating what types of characters occur in each event, it is possible to build a demographic frequency model on how often characters occur in the corpus. 
 
-The database has been built by over a decade of peer-reviewed data entry by a team of over 30 Faulkner experts, with each of the thousands of records adhering to strict editorial principles. In *DY* each event is any time a character or group of characters is present or mentioned at a specific location for a limited duration of time. While delimiting events is a matter of interpretation, the continuous cycles of peer-review have kept variances at a minimum. 
+Based on the demographic frequency model, the world of Yoknapatawpha is heavily skewed towards Whites (`r round(demographic_summary_total$white_percent,0)`%) and men `r  round(demographic_summary_total$male_percent,0)`. The distributions are also heavily left-skewed, meaning that the overwhelming majority of stories feature Whites and men, and in only very few stories do they not represent the majority of characters. Given that Faulkner was himself a White male, this is not entirely surprising. These measures give a rough indication as to the composition of demographics within the corpus. Race, class, and gender can also be linked to one another to get a better sense of the finer distinctions between characters. For example, upper class White males constitute around `r percent(demographic_summary_rcg_total$all_white_upper_class_male)` of the characters who appear, whereas for enslaved black women this number is a paltry `r percent(demographic_summary_rcg_total$all_black_enslaved_female)`. Clearly, there is a stark disparity in terms of who gets represented. 
+
+These demographic distributions per work can be matched to the punctuation distributions. By combining these data models, it is possible to see if there is a correlation between sentence length and the types of characters that occur. To do this, a Pearson correlation was run between 
+
+
 
 
 ### Notes
