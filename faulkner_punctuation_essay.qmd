@@ -11,15 +11,15 @@ editor: visual
 library(tidyverse)
 library(tidytext)
 library(qdapRegex )
-library(psych)
+# library(psych)
 library(EnvStats)
 library(ggpubr)
-library(isotree)
-library(broom)
-library(AICcmodavg)
-library(cluster)    # clustering algorithms
-library(factoextra)
-library(robustbase)
+# library(isotree)
+# library(broom)
+# library(AICcmodavg)
+# library(cluster)    # clustering algorithms
+# library(factoextra)
+# library(robustbase)
 library(univOutl)
 ```
 
