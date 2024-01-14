@@ -29,7 +29,7 @@ There is a lot to say about Faulkner and punctuation.
 
 In this pieces I will argue:
 
-Faulkner pushes the very definition of a sentence in order to demonstrate the continuity of time. Yet, how he experiments with punctuation to achieve this end changes throughout his career. What's more, the philosophy of the long sentence appears to only have salience for some of his fiction and not all of it.
+Faulkner pushes the very definition of a sentence in order to demonstrate the continuity of time. Yet, how he experiments with punctuation to achieve this end changes throughout his career. What's more, the philosophy of the long sentence appears to only have salience for some of his fiction and not all of it. In the main, it applies specifically to characters and events that are about the South's racial past. 
 
 ## Critical literature on Faulkner
 
@@ -37,7 +37,7 @@ Faulkner pushes the very definition of a sentence in order to demonstrate the co
 
 ### Corpus Description
 
-Faulkner's corpus is quite heterogeneous, and consists of novels, short stories, poetry, film scripts, and a text that hovers between a stage play and a novel: *Requiem for a Nun*. Even within these broad categories there are further subdivisions. Speaking of the novels and short-stories more narrowly, there are the 14 novels and 54 short-stories that take place in his famous Yoknapatawpha County. Among these are "uncollected" short stories that were only ever published in magazines and then incorporated wholesale or in part into novels such as *The Unvanquished*, *The Hamlet*, and *Go Down, Moses*. There is also a further set of unpublished stories that are interesting in their own right or that have resonances with Faulkner's more well-known published texts. This leads to a rich body of work that makes for a poor experimental design. Using computational techniques to analyze texts, works best when detecting patterns and exceptions within a particular domain. When a corpus is heterogeneous with many unique texts, it is harder to detect the rules when everything appears to be an exception. While it is possible to make certain generalizations about Faulkner's writing, these observations across the entire corpus are not very meaningful. For example, Faulkner writes longer sentences than other authors (17 words-per-sentence), but this number varies quite widely from canonical works like *As I Lay Dying* that use 12 words per sentence to works that are exceptionally verbose like *Absalom, Absalom*, which uses 50 words per sentence. Therefore, it makes more sense to stay away from large assumptions about how Faulkner punctuated his texts, and instead focus on how Faulkner did so in a particular context, be it his novels, short stories, or other writings. These local insights can then be stitched together to create a more global collage.
+Faulkner's corpus is quite heterogeneous, and consists of novels, short stories, poetry, film scripts, and a text that hovers between a stage play and a novel: *Requiem for a Nun*. Even within these broad categories there are further subdivisions. Speaking of the novels and short-stories more narrowly, there are the 14 novels and 54 short-stories that take place in his famous Yoknapatawpha County. Among these are "uncollected" short stories that were only ever published in magazines and then incorporated wholesale or in part into novels such as *The Unvanquished*, *The Hamlet*, and *Go Down, Moses*. There is also a further set of unpublished stories that are interesting in their own right or that have resonances with Faulkner's more well-known published texts. This leads to a rich body of work that makes for a poor experimental design. Using computational techniques to analyze texts works best when detecting patterns and exceptions within a particular domain. When a corpus is heterogeneous with many unique texts, it is harder to detect the rules when everything appears to be an exception. While it is possible to make certain generalizations about Faulkner's writing, these observations across the entire corpus are not very meaningful. For example, Faulkner writes longer sentences than other authors (17 words-per-sentence), but this number varies quite widely from canonical works like *As I Lay Dying* that use an unremarkable 12 words per sentence to works that are exceptionally verbose like *Absalom, Absalom*, which uses 50 words per sentence. Therefore, it makes more sense to stay away from large assumptions about how Faulkner punctuated his texts, and instead focus on how Faulkner did so in a particular context, be it his novels, short stories, or other writings. These local insights can then be stitched together to create a more global collage.
 
 ## Computation
 
@@ -244,9 +244,10 @@ punctuation_results <- summary_punctuation %>%
 
 ## Sentence length
 
-It does not require computational analysis to understand that Faulkner writes in long sentences. For anyone who has ever taught Faulkner, it is perhaps the most common stumbling block and, indeed, complaint among students. Faulkner himself was asked about it no fewer than four times, when he lectured at at the University of Virginia (CITE). However, quantifying what readers might mean when they say Faulkner's sentences are long is a bit more complex. The first issue is defining what a sentence is. In terms of computation, the simplest way to define it is as any set of words where the first word is capitalized and is closed with end-sentence punctuation like a period, exclamation mark, or question mark. These basic parameters are frequently used to determine sentence length in standard prose writing. This technique works well in most cases, but runs into quite a number of exceptions in Faulkner. For starters, Faulkner has a tendency to nest narratives within quoted material. For example, in *The Hamlet* (1940), much of the story is told by Ratliff, an itinerant sewing machine salesman. When he takes over as narrator, the perspective moves from third person omniscient to first person, and within this embedded narrative, Ratliff quotes various characters. These quotations are themselves sentences, but actually part of a longer sentence. For instance, while describing a scene between two antagonists, the Ratliff says, "What will he say? What can he say except 'All right. What do you aim to do?'" If a sentence is defined as any set of words that starts with a capital letter and ends with end-sentence punctuation then is is four separate sentences. This seems unsatisfactory. The two sentences "All right." and "What do you aim to do?" are embedded within the larger quote "What can he say except". Not accounting for sentence embedding in *The Hamlet* actually makes the average sentence length in Faulkner appear shorter than it is. The exact opposite problem is true in *The Sound and the Fury*. Here Faulkner embeds sentences and phrases through italics. This occurs frequently in the the Quentin section where the character's narration is interrupted by memories. At one point, Quentin recalls Gerald Bland's mother talking about her son's looks, which is interjected by a memory of him fantasizing about shooting his sister's fiance, Herbert Head: "Telling us about Gerald's women in a *Quentin has shot Herbert he shot his voice through the floor of Caddy's room* tone of smug approbation" (105). The main sentence is interrupted by two clauses "Quentin has shot Herbert" and possibly another sentence or a part of one "he shot his voice through the floor of Caddy's room". There is no unambiguous way to determine if the two phrases should be seen as part of the same italicized sentence or if they should be read separately. There are valid interpretations for both. Similarly, while it would be computationally possible to excise the italicized text, this distorts the fact that these italics quite deliberately interrupt and extend the sentence because there is no end-sentence punctuation. Consequently, the sentence in *The Hamlet* and the sentence in *The Sound and the Fury* are roughly the same length, but in the tabulation the former is significantly shorter than the latter. This inconsistency is a feature of the entire corpus, because Faulkner varied the way in which creates long sentences across his career. Sentence length is therefore a rather crude and imperfect measure to understand punctuation in Faulkner, but it makes an interesting starting point for investigation.
+It does not require computational analysis to understand that Faulkner writes in long sentences. For anyone who has ever taught Faulkner, it is perhaps the most common stumbling block and, indeed, complaint among students. Faulkner himself was asked about it no fewer than four times, when he lectured at at the University of Virginia (CITE). However, quantifying what readers might mean when they say Faulkner's sentences are long is a more complex. The first issue is defining what constitutes a sentence. In terms of computation, the simplest way to define it is as any set of words where the first word is capitalized and is closed with end-sentence punctuation like a period, exclamation mark, or question mark. These basic parameters are frequently used to determine sentence length in standard prose writing. This technique works well in most cases, but runs into quite a number of exceptions in Faulkner. For starters, Faulkner has a tendency to nest narratives within quoted material. For example, in *The Hamlet* (1940), much of the story is told by Ratliff, an itinerant sewing machine salesman. When he takes over as narrator, the perspective moves from third person omniscient to first person, and within this embedded narrative Ratliff quotes various characters. These quotations are themselves sentences, but actually part of a longer sentence. For instance, while describing a scene between two antagonists, Ratliff says, "What will he say? What can he say except 'All right. What do you aim to do?'" If a sentence is defined as any set of words that starts with a capital letter and ends with end-sentence punctuation then this is four separate sentences. This seems unsatisfactory. The two sentences "All right." and "What do you aim to do?" are embedded within the larger quote started with "What can he say except". Not accounting for sentence embedding in *The Hamlet* actually makes the average sentence length in Faulkner appear shorter than it is. 
+The exact opposite problem is true in *The Sound and the Fury*. Here Faulkner embeds sentences and phrases through italics. This occurs frequently in the the Quentin section where the character's internal narration is interrupted by memories. At one point, Quentin recalls Gerald Bland's mother talking about her son's looks, which is interjected by a memory of him fantasizing about shooting his sister's fiance, Herbert Head: "Telling us about Gerald's women in a *Quentin has shot Herbert he shot his voice through the floor of Caddy's room* tone of smug approbation" (105). The main sentence is: "Telling us about Gerald's women in a tone of smug approbation. This is interrupted by two clauses "Quentin has shot Herbert" and possibly another sentence or a part of one "he shot his voice through the floor of Caddy's room". There is no unambiguous way to determine if the two phrases should be seen as part of the same italicized sentence or if they should be read separately. There are valid interpretations for both. Similarly, while it would be computationally possible to excise the italicized text, this distorts the fact that these italics quite deliberately interrupt and extend the sentence because there is no end-sentence punctuation. Consequently, the sentence in *The Hamlet* and the sentence in *The Sound and the Fury* are roughly the same length, but in the tabulation the former is significantly shorter than the latter. This inconsistency is a feature of the entire corpus, because Faulkner varied the way in which creates long sentences across his career. Sentence length is therefore a rather crude and imperfect measure to understand punctuation in Faulkner, but it makes an interesting starting point for investigation.
 
-Going by the imperfect measure of sentence length, Faulkner's writing is not exceptional compared to other writing at the time. At 17 words per sentence, Faulkner's sentences are only slightly longer than the average 16 words per sentence for a text in the Corpus of English Novels, which covers writing from 1881 - 1922 (Ihrmark 79) and longer still than the 13 words per sentence around the 1930s (Rudnicka). Nor is the slightly higher than average sentence length a feature of all his works. The *Sound and the Fury* is notoriously complex. Nevertheless, at only 10 words per sentence, it uses fewer words on average than Hemingway's *The Old Man and the Sea*, which uses 13 words per sentence (Ihrmark 82). Despite this counter intuitive disparity in average sentence length, Faulkner's more verbose style could never be confused with Hemingway's trademark concision. In part, this has to do with the distribution of sentence lengths within each text. The *The Sound and the Fury* may have a lower average word count than *The Old Man and the Sea*, but it also contains one sentence that counts over 4,000 words. Clearly, this is less succinct than Hemingway, and probably most other authors as well. These long sentences, it should be noted, are more of a statistical exception than the rule. The normal distribution for this text, and most of Faulkner's other texts is heavily right-skewed. Meaning that for the most part they tend of have "average"-length sentences interspersed with much longer sentences. In the case of the *Sound and the Fury* roughly 90% of the sentences are 17 words or fewer in length. The same can be said for Faulkner's other texts, most of these (60%) have an average sentence length lower than the total average across the corpus. More succinctly, just as a small share of sentences in each work gives the impression of long sentences, and similarly within the corpus of Faulkner's writing there are a minority of works that are above average in sentence length. Statistically, lengthy sentences are a local feature not a global phenomenon.
+Going by the imperfect measure of sentence length, Faulkner's writing is not exceptional compared to other writing at the time. At 17 words per sentence, Faulkner's sentences are only slightly longer than the average 16 words per sentence for a text in the Corpus of English Novels, which covers writing from 1881 - 1922 (Ihrmark 79) and longer still than the 13 words per sentence around the 1930s (Rudnicka). Nor is the slightly higher than average sentence length a feature of all his works. The *Sound and the Fury* is notoriously complex. Nevertheless, at only 10 words per sentence, it uses fewer words on average than Hemingway's *The Old Man and the Sea*, which uses 13 words per sentence (Ihrmark 82). Despite this counter intuitive disparity in average sentence length, Faulkner's more verbose style could never be confused with Hemingway's trademark concision. In part, this has to do with the distribution of sentence lengths within each text. The *The Sound and the Fury* may have a lower words-per-sentence average than *The Old Man and the Sea*, but it also contains one sentence that counts over 4,000 words. Clearly, this is less succinct than Hemingway, and probably most other authors as well. These long sentences, it should be noted, are more of a statistical exception than the rule. The normal distribution for this text, and most of Faulkner's other texts is heavily right-skewed. Meaning that for the most part they tend of have "average"-length sentences interspersed with much longer sentences. In the case of the *Sound and the Fury* roughly 90% of the sentences are 17 words or fewer in length. The same can be said for Faulkner's other texts, most of these (60%) have an average sentence length lower than the total average across the corpus. More succinctly, just as a small share of sentences in each work gives the impression of long sentences, and, similarly, within the corpus of Faulkner's writing there are a minority of works that are above average in sentence length. Statistically, lengthy sentences are a local feature not a global phenomenon.
 
 ```{r sentence_lengths_specific_texts}
 
@@ -801,23 +802,23 @@ all_outliers_count <- all_outliers %>%
 
 ## Extending the Sentences: Pauses and Such
 
-The preceding discussion about sentence length raises an obvious question: What is a long sentence? Is it any sentence above the average in a corpus? If so, how much longer does it need to be to be consider long and not simply longer than usual? If a sentence is indeed long, is there a maximum length? At what point, does a string of words grammatically cease to be sentence? James Joyce famously wrote "the longest sentence" in English in the Penelope chapter of *Ulysses*, but this sentence is not long in the same way a sentence in Faulkner is long. While there is certainly semantic coherence underlying Joyce's string of words, the lack of mid-sentence punctuation makes it grammatically incorrect if not necessarily syntactically incoherent. This was rather point, of course, but it is an important distinction to make. Faulkner not only creates long strings of words, but also coordinates and subordinates his clauses through punctuation. Thus, whereas Joyce saw the intervention of punctuation as an infelicity to the ineluctable flow of language in the Penelope episode, the sheer profusion of punctuation in Faulkner speaks to the endless way in which meaning branches, eddies, rejoins and ends in an arbitrary terminus only to continue again. To use two spatial metaphors, The Penelope chapter is a stream, Faulkner's writing is a watershed.
+The preceding discussion about sentence length raises an obvious question: What is a long sentence? Is it any sentence above the average in a corpus? If so, how much longer does it need to be to be consider long and not simply longer than usual? If a sentence is indeed long, is there a maximum length? At what point, does a string of words grammatically cease to be sentence? James Joyce famously wrote "the longest sentence" in English in the Penelope chapter of *Ulysses*, but this sentence is not long in the same way a sentence in Faulkner is long. While there is certainly semantic coherence underlying Joyce's string of words, the lack of mid-sentence punctuation makes it grammatically incorrect if not necessarily syntactically incoherent. This was rather point, of course, but it is an important distinction to make. Faulkner not only creates long strings of words, but also coordinates and subordinates his clauses through punctuation. Thus, whereas Joyce saw the intervention of punctuation as an infelicity to the ineluctable flow of language in the Penelope episode, the sheer profusion of punctuation in Faulkner speaks to the endless way in which meaning branches, eddies, rejoins and ends in an arbitrary terminus only to recirculate again. To use two spatial metaphors, The Penelope chapter is a stream, Faulkner's writing is a watershed.
 
 To understand how Faulkner lengthens his sentences it is useful to look at mid-sentence punctuation like: colons, ellipses, and parenthesis. Faulkner is not merely making sentences very long, but using punctuation to stretch out the definition of a sentence, and, in turn, call attention to the punctuation itself. The finality of the period is replaced with the indeterminacy of the unfinished sentence. What is telling about Faulkner's writing is that he does not simply write long sentences throughout his career, but experiments with different punctuation configurations to make this possible. Arguably, any number of texts serve as good examples, but there are three salient texts that deviate from Faulkner's own writing statistically: *Absalom, Absalom!*, *Intruder in the Dust*, and "Dry September."
 
-To determine which of Faulkner's texts have punctuation at variance with the corpus more generally,a statistical model of Faulkner's short stories and novels was created. The play, *A Requiem for a Nun* was excluded from this analysis, because the punctuation patterns, such as placing a colon after every character speaking, distorted the average. With this slightly reduced corpus, the texts were broken down into sentences and each mid-sentence punctuation mark was counted. Intuitively, sentence length and mid-sentence punctuation are positively correlated. As sentences get longer, there is a higher likelihood of finding mid-sentence punctuation. There are some functional limits to this correlation, however. Modern punctuation tends to function as a syntactical system that regulates the number of certain punctuation marks that can be used (@Shou 198). This is particularly true of colons, semi-colons, and parenthesis. For example, one line in *The Mansion* (1959) has 9 semi-colons and is over 400 words long. It pushes the limits as to how many independent clauses a reader can reasonably be expected to understand in the same ostensibly coherent thought delimited by a period.
+To determine which of Faulkner's texts have punctuation at variance with the corpus more generally,a statistical model of Faulkner's short stories and novels was created. The play, *A Requiem for a Nun* was excluded from this analysis, because the punctuation patterns, such as placing a colon to break between character name and their dialogue, distorted the average. With this slightly reduced corpus, the texts were broken down into sentences and each mid-sentence punctuation mark was counted. Intuitively, sentence length and mid-sentence punctuation are positively correlated. As sentences get longer, there is a higher likelihood of finding mid-sentence punctuation. There are some functional limits to this correlation, however. Modern punctuation tends to function as a syntactical system that regulates the number of certain punctuation marks that can be used (@Shou 198). This is particularly true of colons, semi-colons, and parenthesis. For example, one line in *The Mansion* (1959) has 9 semi-colons and is over 400 words long. It pushes the limits as to how many independent clauses a reader can reasonably be expected to understand in the same ostensibly coherent thought delimited by a period.
 
 By taking the averages of the number of mid-sentence punctuation marks per sentence across all texts, it is possible to detect texts that deviate from the overall pattern. In general, phonological and syntactical phenomena tend to follow a power-law distribution (@sun and Wang 32, Newman 372); where the probability decreases exponentially with each frequency interval. Syntactically, this makes sense. In any given text, most sentences do not contain commas. If a sentence does contain a comma, it is far less likely that it would also contain a second comma, it is exponentially less likely to contain a third comma. While this rule breaks down when it comes to punctuation marks like colons, which are governed by grammatical rules that prevent more than one colon per sentence, it is safe to assume that if Faulkner did not change his punctuation patterns the relative frequency would be within the same range across the corpus. Plotting the distributions across all punctuation marks reveals an exponential distribution best described as chi-squared with three degrees of freedom ($$\chi^2_3$$); visually this is curve that looks a bit like a slide on a playground: a steep ladder on the left-hand side with a long-curve that never quite reaches the ground on the right. This curve indicates that many texts are within the same range, but a few texts have a very high relative frequency of specific punctuation marks. 
 
-Determining when on that tail a value is outside of the expected range is a matter of some interpretation. Indeed, deciding that a data point is an outlier is an ongoing debate among mathematicians (Hawkins 9-12). As the distance between the mean and the highest value was quite far apart, the skewness of the distribution was corrected for by either taking the inverse or the log of each of the values depending on the line of best fit in a quantile-quantile plot. Using these normalized distributions, Rosner's multiple outlier test was run on any value outside $$Q3 + 1.5IQR$$. Additionally, a secondary test was run using the Adjusted box plot method developed by Hubert and Vandervieren (@Hubert). The tests revealed slightly different outliers, but on the whole there is an inconsistent use of mid-sentence punctuation across the corpus. Faulkner uses some mid-sentence punctuation substantially more than in some other texts. This indicates some measure of experimentation with how he is creating long sentences. If he were developing only one particular technique, for example concatenating a string of independent clauses separated by a semi-colon as in *The Mansion*, the data for the other punctuation marks would likely not be as skewed. This is not the case, and indicates variance in punctuation techniques across his career. This variance does not appear to be strongly time dependent. There were no distinct phases to his punctuation experiments, but instead individual works stand out as being particularly experimental.
+Determining when on that tail a value is outside of the expected range is a matter of some interpretation. Indeed, deciding that a data point is an outlier is an ongoing debate among mathematicians (Hawkins 9-12). As the distance between the mean and the highest value was quite far apart, the skewness of the distribution was corrected for by either taking the inverse or the log of each of the values depending on the line of best fit in a quantile-quantile plot. Using these normalized distributions, Rosner's multiple outlier test was run on any value outside $$Q3 + 1.5IQR$$. Additionally, a secondary test was run using the Adjusted box plot method developed by Hubert and Vandervieren (@Hubert). The tests revealed slightly different outliers, but on the whole there is an inconsistent use of mid-sentence punctuation across the corpus. Faulkner uses some mid-sentence punctuation substantially more than in some texts versus others. This indicates some measure of experimentation with how he is creating long sentences. If he were developing only one particular technique, for example concatenating a string of independent clauses separated by a semi-colon as in *The Mansion*, the data for the other punctuation marks would likely not be as skewed. This is not the case, and indicates variance in punctuation techniques across his career. This variance does not appear to be strongly time dependent. There were no distinct phases to his punctuation experiments, but instead individual works stand out as being particularly experimental.
 
 Three texts provide useful insights. *Absalom, Absalom*, and *Intruder in the Dust*, and "Dry September" were all marked as outliers. As one of Faulkner's most challenging texts, it is unsurprising that the punctuation patterns in *Absalom, Absalom!* diverge from the corpus. Averaging around 50 words per sentence, the text is marked by a heavy use of parentheses. Thus, a sentence will be interrupted by parenthetical statements, which in themselves are not usually sentences, leading to sentences of extraordinary length. In one sentence stretching over 1,000 words, he uses 9 parenthetical statements as a running commentary on the main sentence (AA 124-127). Some of these parentheticals are themselves several lines. All of this is complicated by the fact that this particular sentence occurs in Chapter 6, which is itself entirely surrounded by parentheses. As a result, the parentheses in this sentence are actually nested within surrounding parentheses. This nesting continues throughout the Chapter 6 and at some point the the word Quentin is nested 4 levels deep. That is, as an aside to an aside to an aside. Not only, then, are Faulkner's sentences very long in *Absalom, Absalom!* they are also, in a sense, deep. Each parenthetical statement adds more commentary and context, which itself requires more commentary and context. It is fitting that peeling away all of these parentheses like layers of an onion reveals the absent center: Quentin. The tale is ultimately about the teller.
 
-In a slightly different fashion, Faulkner instrumentalizes colons in *Intruder in the Dust* to create sentence depth. To give an extreme example, one sentence in *Intruder in the Dust* is over 1,600 words long and features 18 colons. The sentence deploys colons as a clausal adjunct. Nunberg labels this phenomenon colon-expansion, whereby the content following the colon expands or elaborates on the preceding clause (Nunberg 30). Importantly, he points out that there are only two constraints to a colon-expansion. First, there is a semantic limit to the extent to which something can be elaborated, and, two, colon-expansions cannot themselves contain other colon-expansions (Nunberg 30-31). Faulkner violates the former by dint of the latter. Each sentence dilates in meaning as he adds on more clausal adjuncts and elaborations. While it is impractical to quote the sentence in its entirety, the opening sequence captures this effect: "Because he was free: in bed: in the cool familiar room...(34)". With each colon more details about the narrative situation are revealed. The choice for concatenating clauses with a colon and not simply writing new sentences, appears to be similar to the depth effect created through parentheticals in *Absalom, Absalom!*. With each new colon the reader is tasked with processing a new piece of information that falls within the scope of one sentence. The narrative does not move forward but instead moves deeper.
+In a slightly different fashion, Faulkner instrumentalizes colons in *Intruder in the Dust* to create sentence depth. To give an extreme example, one sentence in *Intruder in the Dust* is over 1,600 words long and features 18 colons. The sentence deploys colons as a clausal adjunct. Nunberg labels this phenomenon colon-expansion, whereby the content following the colon expands or elaborates on the preceding clause (Nunberg 30). Importantly, he points out that there are only two constraints to a colon-expansion. First, there is a semantic limit to the extent to which something can be elaborated, and, two, colon-expansions cannot themselves contain other colon-expansions (Nunberg 30-31). Faulkner violates the former by dint of the latter. Each sentence dilates in meaning as he adds on more clausal adjuncts and elaborations. While it is impractical to quote Faulkner's multipage sentence in its entirety, the opening sequence captures this effect: "Because he was free: in bed: in the cool familiar room...(34)". With each colon more details about the narrative situation are revealed. The choice for concatenating clauses with a colon and not simply writing new sentences, appears to be similar to the depth effect created through parentheticals in *Absalom, Absalom!*. With each new colon the reader is tasked with processing a new piece of information that falls within the scope of one sentence. The narrative does not move forward but instead moves deeper.
 
 It does not require inferential statistics to understand that the punctuation in *Absalom, Absalom!* and *Intruder in the Dust* are unusual, even for Faulkner. One surprising text that is a statistical outlier is "Dry September." This is a highly canonical Faulkner story and frequently features in literature anthologies because it is very teachable (list anthologies). "Dry September" is part of cluster of stories from 1927-1934 that average a higher number of ellipses per sentence than other Faulkner texts. To mark this as a general feature of Faulkner's style during this period would be a mistake, however; as canonical works like *The Sound and the Fury*, *As I Lay Dying*, and *Light in August*, all written around this time, do not feature nearly as many ellipses. Instead, this may have been a punctuation mark he was experimenting with in some specific contexts. 
 
-In "Dry September" the ellipses serve a powerful function. The story is about the lynching of a Black man, Will Mayes, based on rumors that a White woman, Minnie Cooper, had been violated by him. The story never shows the actual lynching nor is it ever clear that Cooper had accused Mayes or anyone of anything. The majority of these ellipses (87%) occur in the opening scene of the story when the men of the town share incomplete knowledge of events. It is unclear what may have happened, if anything, and Faulkner marks these statements with ellipses. The silence created by the ellipse amplifies the possible horror: "Damn, if I'm going to let a white woman..."; "By god if they..."; "I don't live here, but by God, if our mothers and wives and sisters...". Likewise, previews of the impending lynching are also obscured by ellipses. "All that're with me get up from there. The ones that ain't...", the ringleader, McLendon emplores the men in the barber shop. The ellipse here hints at the fate of the men who do not participate in the lynching. These ellipses function as another way in which Faulkner extends his sentences. In this case, uncharacteristically for Faulkner, without using more words.
+In "Dry September" the ellipses serve a powerful function. The story is about the lynching of a Black man, Will Mayes, based on rumors that a White woman, Minnie Cooper, had been violated by him. The story never shows the actual lynching nor is it ever clear that Cooper had accused Mayes or anyone of anything. The majority of these ellipses (87%) occur in the opening scene of the story when the men of the town share incomplete knowledge of events. It is unclear what may have happened, if anything, and Faulkner marks these statements with ellipses. The silence created by the ellipse amplifies the possible horror: "Damn, if I'm going to let a white woman..."; "By god if they..."; "I don't live here, but by God, if our mothers and wives and sisters...". Likewise, previews of the impending lynching are also obscured by ellipses. "All that're with me get up from there. The ones that ain't...", the ringleader, McLendon implores the men in the barber shop. The ellipse here hints at the fate of the men who do not participate in the lynching. These ellipses function as another way in which Faulkner extends his sentences. In this case, uncharacteristically for Faulkner, without using more words.
 
 The different techniques Faulkner uses to achieve his long sentences show a sustained commitment to an artistic vision he expressed throughout his career. Far from limiting experimentation to a particular phase or type of writing, his punctuation speaks to a constant desire to capture the long sentence. To give every character their due as experiencing their past present and future simultaneously. While Faulkner was certainly aspiring to capture a universal human condition, when these long sentences appear is not as universal as it might first seem. As a reader, it would be impossible to keep track of which characters appear in which long sentences. It is possible to capture this computationally, doing so reveals a stark fact: the long sentence appears to be reserved for some people in Yoknapatawpha county. Nor is it that every past is part of the "sum of the past" only those pasts about race are interesting.
 
@@ -953,33 +954,33 @@ demographics_punctuation <- summary_punctuation %>%
 ```
 
 ```{r correlations}
-#correlations
+#First trials at correlation. Did not yield interesting results
 
-
-correlations_string_length_all <- demographics_punctuation %>%
-  ungroup() %>%
-  summarise(across(where((is.numeric)),  ~ cor(.x, string_length, method =
-                                                 "pearson")))
-
+# 
+# correlations_string_length_all <- demographics_punctuation %>%
+#   ungroup() %>%
+#   summarise(across(where((is.numeric)),  ~ cor(.x, string_length, method =
+#                                                  "pearson")))
+# 
 
 ```
 
 ```{r correlations_novel}
-correlations_string_length_novel <- demographics_punctuation %>%
-  filter(type=="novel") %>% 
-  ungroup() %>%
-  summarise(across(where((is.numeric)),  ~ cor(.x, string_length, method =
-                                             "pearson")))
+# correlations_string_length_novel <- demographics_punctuation %>%
+#   filter(type=="novel") %>% 
+#   ungroup() %>%
+#   summarise(across(where((is.numeric)),  ~ cor(.x, string_length, method =
+#                                              "pearson")))
 #No significant correlations
 
 ```
 
 ```{r correlations_short_story}
-correlations_string_length_short_story <- demographics_punctuation %>%
-  filter(type=="short_story") %>% 
-  ungroup() %>%
-  summarise(across(where((is.numeric)),  ~ cor(.x, string_length, method =
-                                             "pearson")))
+# correlations_string_length_short_story <- demographics_punctuation %>%
+#   filter(type=="short_story") %>% 
+#   ungroup() %>%
+#   summarise(across(where((is.numeric)),  ~ cor(.x, string_length, method =
+#                                              "pearson")))
 #No significant correlations
 
 ```
@@ -987,7 +988,7 @@ correlations_string_length_short_story <- demographics_punctuation %>%
 
 
 
-```{r}
+```{r raceclassgender_demographic}
 raceclassgender_demographic <- short_demographic %>%
   mutate(race_class_gender = paste(Race, Class, Gender, sep ="_")) %>%
   mutate(race_class_gender = tolower(str_replace_all(race_class_gender, " ", "_"))) %>%
@@ -1004,6 +1005,9 @@ raceclassgender_demographic <- short_demographic %>%
                               
 ```
 
+
+
+
 ```{r raceclassgender_demographic_summary}
 #Breakdown of each text by race class and gender
 
@@ -1017,6 +1021,38 @@ raceclassgender_demographic_summary <-
 
 ```
 
+
+```{r racegender_demographic}
+racegender_demographic <- short_demographic %>%
+  mutate(racegender = paste(Race, Gender, sep ="_")) %>%
+  mutate(racegender = tolower(str_replace_all(racegender, " ", "_"))) %>%
+  group_by(SourceTextCode, Nid) %>%
+  pivot_wider(
+    id_cols = c(SourceTextCode, PageNumber, Nid),
+    names_from = racegender,
+    values_from = Gender,
+    values_fn = list(Gender = length),
+    names_prefix = "all_"
+  ) %>%
+  rename_with( ~ tolower(gsub(" ", "_", .x, fixed = TRUE))) %>%
+  ungroup()
+```
+
+```{r racegender_demographic_summary}
+#Breakdown of each text by race class and gender
+
+racegender_demographic_summary <-
+  racegender_demographic %>%
+  group_by(sourcetextcode) %>%
+  summarise(across(starts_with("all_"), ~ sum(.x, na.rm = TRUE))) %>%
+  group_by(sourcetextcode) %>%
+  mutate(total = sum(c_across(starts_with("all_")), na.rm = TRUE)) %>%
+  mutate(across(where(is.numeric),  ~ . / total, .names = "{.col}_percent")) %>% 
+  select(contains("_percent"))
+```
+
+
+
 ### Checking for normalcy
 
 ```{r}
@@ -1026,7 +1062,7 @@ demographics_punctuation %>%
                  colour = "black",
                  fill = "white") +
   geom_density(alpha = .2, fill = "#FF6666") +
-  ggtitle("comma Distribution")
+  ggtitle("Distribution of percentage of white characters")
 ```
 
 ```{r}
@@ -1036,7 +1072,7 @@ demographics_punctuation %>%
                  colour = "black",
                  fill = "white") +
   geom_density(alpha = .2, fill = "#FF6666") +
-  ggtitle("comma Distribution")
+  ggtitle("Distribution of Percent Male Characters")
 ```
 
 
@@ -1067,75 +1103,138 @@ demographics_punctuation_raceclassgender <- summary_punctuation %>%
             
 ```
 
-```{r correlations_string_length_rcg_all}
-#Any correlations with string length that are over .2 or below .2
-
-correlations_string_length_rcg_all <-
-  demographics_punctuation_raceclassgender %>%
-  ungroup() %>%
-  summarise(across(where((is.numeric)),  ~ cor(.x, string_length, method =
-                                                 "pearson"))) %>%
-  pivot_longer(starts_with("all_"), names_to = "types") %>%
-  filter(value > .2 | value < -.2)
-```
 
 
 ```{r}
-target_column = "string_length"
+# key_demographics <- demographics_punctuation_raceclassgender %>% 
+#                   filter(type=="novel") %>% 
+#                     select(string_length, any_of(correlations_string_length_rcg$types))
+
+```
 
 
-#stuck on this problem can't figure out how to create a correlation table. 
-cor_results <- demographics_punctuation_raceclassgender %>%
+
+```{r corellation_results_all}
+#Create a matrix with all the relevant correlation values that will be tested against string_length
+
+correlation_matrix_all <- demographics_punctuation_raceclassgender %>% 
   ungroup() %>% 
-  select(-target_column) %>% 
-  select(11:50) %>% # Exclude the target column from the analysis
-  summarise_all(list(cor = ~ cor(., demographics_punctuation_raceclassgender[[target_column]]))) %>% 
-  gather(key = "variable", value = "correlation") %>% 
-  mutate(p_value = across(where(is.numeric(),~ cor.test(demographics_punctuation_raceclassgender[[target_column]], demographics_punctuation_raceclassgender[[.]], method = "pearson")$p.value)))
+  select_if(is.numeric) %>% 
+  select(starts_with("all_"))
+
+# Test correlation of string_length with all other variables. The map function iterates over all names in the matrix and runs a pearson correlation test against string_length. The resulting object is unnested and converted to a table. Only values with a p-value less than .05 were kept.
+
+correlation_results_all <- map(names(correlation_matrix_all), ~ {
+  test_result <-
+    cor.test(
+      demographics_punctuation_raceclassgender$string_length,
+      correlation_matrix_all[[.x]],
+      method = "pearson"
+    )
+  tibble(
+    column = .x,
+    cor_coefficient = round(test_result$estimate, 3),
+    p_value = round(test_result$p.value, 3)
+  )
+}) %>% bind_rows() %>%
+  unnest_wider(cor_coefficient) %>%
+  filter(p_value < .05) %>%
+  filter(cor > .2 | cor < -.2)
 
 ```
 
+```{r correlation_results_novel}
+#additional testing was run on novels and short_stories. Neither produced any interesting results. As the data is reduced, the statistical significance goes down.
 
-```{r correlations_string_length_rcg_novel}
-correlations_string_length_rcg_novel <-
-  demographics_punctuation_raceclassgender %>%
-  filter(type =="novel") %>% 
-  ungroup() %>%
-  summarise(across(where((is.numeric)),  ~ cor(.x, string_length, method =
-                                                 "pearson"))) %>%
-  pivot_longer(starts_with("all_"), names_to = "types") %>%
-  filter(value > .2 | value < -.2)
+correlation_matrix_novel <- demographics_punctuation_raceclassgender %>% 
+  ungroup() %>% 
+  filter(type=="novel") %>% 
+  select_if(is.numeric) 
 
+# Test correlation of string_length with all other variables
+correlation_results_novel <- map(names(correlation_matrix_novel), ~{
+  test_result <- cor.test(correlation_matrix_novel$string_length, correlation_matrix_novel[[.x]])
+  tibble(
+    column = .x,
+    cor_coefficient = round(test_result$estimate, 3),
+    p_value = round(test_result$p.value, 3)
+  )
+}) %>% bind_rows() %>%
+  unnest_wider(cor_coefficient) %>% 
+  filter(p_value<.1) %>% 
+  filter(cor > .2 | cor < -.2) %>% 
+  filter(str_detect(column, "all_"))
 ```
-```{r correlations_string_length_rcg_short_story}
-correlations_string_length_rcg_short_story <-
-  demographics_punctuation_raceclassgender %>%
-  filter(type =="short_story") %>% 
-  ungroup() %>%
-  summarise(across(where((is.numeric)),  ~ cor(.x, string_length, method =
-                                                 "pearson"))) %>%
-  pivot_longer(starts_with("all_"), names_to = "types") %>%
-  filter(value > .2 | value < -.2)
-
-```
-
 
 ```{r}
-key_demographics <- demographics_punctuation_raceclassgender %>% 
-                  filter(type=="novel") %>% 
-                    select(string_length, any_of(correlations_string_length_rcg$types))
+correlation_matrix_short_story <- demographics_punctuation_raceclassgender %>% 
+  ungroup() %>% 
+  filter(type=="short_story") %>% 
+  select_if(is.numeric) 
+
+# Test correlation of string_length with all other variables
+correlation_results_short_story <- map(names(correlation_matrix_short_story)[-1], ~{
+  test_result <- cor.test(correlation_matrix_short_story$string_length, correlation_matrix_short_story[[.x]])
+  tibble(
+    column = .x,
+    cor_coefficient = test_result$estimate, 
+    p_value = round(test_result$p.value, 3)
+  )
+}) %>% bind_rows() %>%
+  unnest_wider(cor_coefficient) %>% 
+  filter(p_value<.1) %>% 
+  filter(cor > .2 | cor < -.2) %>% 
+  filter(str_detect(column, "all_"))
+```
+
+```{r demographics_punctuation_racegender}
+demographics_punctuation_racegender <- summary_punctuation %>%
+  inner_join(racegender_demographic_summary,
+             join_by(code == sourcetextcode))
+```
+
+```{r}
+#Create a matrix with all the relevant correlation values that will be tested against string_length
+
+correlation_matrix_racegender_all <- demographics_punctuation_racegender %>% 
+  ungroup() %>% 
+  select_if(is.numeric) %>% 
+  select(starts_with("all_"))
+
+# Test correlation of string_length with all other variables. The map function iterates over all names in the matrix and runs a pearson correlation test against string_length. The resulting object is unnested and converted to a table. Only values with a p-value less than .05 were kept.
+
+correlation_results_racegender_all <- map(names(correlation_matrix_racegender_all), ~ {
+  test_result <-
+    cor.test(
+      demographics_punctuation_racegender$string_length,
+      correlation_matrix_racegender_all[[.x]],
+      method = "pearson"
+    )
+  tibble(
+    column = .x,
+    cor_coefficient = round(test_result$estimate, 3),
+    p_value = round(test_result$p.value, 3)
+  )
+}) %>% bind_rows() %>%
+  unnest_wider(cor_coefficient) %>%
+  filter(p_value < .05) %>%
+  filter(cor > .2 | cor < -.2)
 
 ```
+
+
 
 ## Characters and the long Sentence
 
 When Faulkner is asked about his use of long sentences at the Virginia Colleges Conference in 1957, he claims that there is no such thing as "was" because the past is pat of "every man, every woman, at every moment". This aesthetic that attempts to get "his [a character in a story] past and possibly his future into the instant in which he does something" ( Faulkner at Virginia). On the surface, this has a universalist appeal: men, women, and everyone is the "sum" of their past. Yet, if this were truly universal long-sentences would be equally distributed among different types of characters in the corpus. 
 
-Understand how the long sentence may or may not apply to certain characters requires knowing what type of characters are in what specific texts. Fortuntately, the *Digital Yoknapatawpha* project has at least some of this data available. Created with the mission to encode every character, location, and event in Faulkner's Yoknapatawpha fiction, *DY* represents a rich database of every character in every event in every text that takes place in Yoknapatawpha. The database has been built by over a decade of peer-reviewed data entry by a team of over 30 Faulkner experts, with each of the thousands of records adhering to strict editorial principles. All data entry for the database was manually performed, which leaves room for human error and a variance in interpretations, but the continuous cycles of peer-review have kept variances to a minimum. The database focuses exclusively on the 14 novels and 54 short stories that takes place in Yoknapatawpha, and excludes roughly `r round(dy_corpus$percent[2],0)`% of the Faulkner's writing in novels and short stories. This caveat aside, the database still represents the majority of Faulkner's writing. In *DY* each event is any time a character or group of characters is present or mentioned at a specific location for a limited duration of time. Each character, in turn, is identified by different characteristics, race, class, gender, rank and other important attributes. By calculating what types of characters occur in each event, it is possible to build a demographic frequency model on how often characters occur in the corpus. 
+Understand how the long sentence may or may not apply to certain characters requires knowing what type of characters are in what specific texts. Fortunately, the *Digital Yoknapatawpha* project has at least some of this data available. Created with the mission to encode every character, location, and event in Faulkner's Yoknapatawpha fiction, *DY* represents a rich database of every character in every event in every text that takes place in Yoknapatawpha. The database has been built by over a decade of peer-reviewed data entry by a team of over 30 Faulkner experts, with each of the thousands of records adhering to strict editorial principles. All data entry for the database was manually performed, which leaves room for human error and a variance in interpretations, but the continuous cycles of peer-review have kept variances to a minimum. The database focuses exclusively on the 14 novels and 54 short stories that takes place in Yoknapatawpha, and excludes roughly `r round(dy_corpus$percent[2],0)`% of the Faulkner's writing in novels and short stories. This caveat aside, the database still represents the majority of Faulkner's writing. In *DY* each event is any time a character or group of characters is present or mentioned at a specific location for a limited duration of time. Each character, in turn, is identified by different characteristics, race, class, gender, rank and other important attributes. By calculating what types of characters occur in each event, it is possible to build a demographic frequency model on how often characters occur in the corpus. 
 
 Based on the demographic frequency model, the world of Yoknapatawpha is heavily skewed towards Whites (`r round(demographic_summary_total$white_percent,0)`%) and men `r  round(demographic_summary_total$male_percent,0)`. The distributions are also heavily left-skewed, meaning that the overwhelming majority of stories feature Whites and men, and in only very few stories do they not represent the majority of characters. Given that Faulkner was himself a White male, this is not entirely surprising. These measures give a rough indication as to the composition of demographics within the corpus. Race, class, and gender can also be linked to one another to get a better sense of the finer distinctions between characters. For example, upper class White males constitute around `r percent(demographic_summary_rcg_total$all_white_upper_class_male)` of the characters who appear, whereas for enslaved black women this number is a paltry `r percent(demographic_summary_rcg_total$all_black_enslaved_female)`. Clearly, there is a stark disparity in terms of who gets represented. 
 
-These demographic distributions per work can be matched to the punctuation distributions. By combining these data models, it is possible to see if there is a correlation between sentence length and the types of characters that occur. To do this, a Pearson correlation was run between 
+These demographic distributions per work can be matched to the punctuation distributions. By combining these data models, it is possible to see if there is a correlation between sentence length and the types of characters that occur. To do this, a Pearson correlation was run between a race, class, gender composite of all the characters. There was a weak positive correlation between sentence length and four types of characters: MixedBlackWhite Enslaved Female, MixedBlackWhite Upper Class Male, MixedBlackWhite indeterminable Male, and MixedBlackWhite Upper Class Female. To a certain extent, sentence length goes up when there are proportionally more characters who do not fall neatly into the South's strict racial categories. 
+
+Looking at the racial composition of one text is still a crude measure, since it does not locate those characters within a sentence. It could be that there are long sentences in a text, but that the character involved in the action is not one of the kind described above.
 
 
 
@@ -1153,3 +1252,5 @@ There do not appear to be any strong correlations between sentence length and th
 No correlations with race class gender either
 
 "Afternoon of a cow" was published in 1947 nearly 40 years after Faulkner wrote it. Some of the texts are not always published when written.
+
+Compson appendix, name for a city, 

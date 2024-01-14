@@ -1,0 +1,149 @@
+---
+title: "Text Processing Supplement"
+format: html
+editor: visual
+---
+
+## Part 1: Pre-processing
+
+### Import libraries
+```{r libraries}
+library(tidyverse)
+library(tidytext)
+library(stringi)
+```
+
+```{r rmdformats, include=FALSE}
+library(rmdformats)
+```
+
+
+### Import the full text of *Absalom, Absalom!*
+
+*Note*: Due to copyright the full text of *Absalom, Absalom!* has been left out of the repository. 
+
+```{r import_refined_text_files}
+
+all_works_refined <-
+  list.files(file.path("refined_text_data"), full.names = TRUE, pattern = "*.txt") %>% #grab a list of all the files with .txt extension
+  #the full.names value needs to set to TRUE to get the full path. For some reason you will get a "permission denied" error if you do not do this.
+  map_df(~ tibble(  #the map function performs the same command on all parts of the data set. In this case the .txt files
+    text = read_file(.), #read the files
+    date = ifelse(
+      str_detect(basename(.), "[:digit:]{4}") == TRUE,
+      str_extract(basename(.), "[:digit:]{4}"),
+      NA), #see if there is a date in yyyy format, i.e. 1987, and extract the date, if it can't find date NA
+    title=str_extract(basename(.), "(?<=_)[:alpha:]*"),
+    code=str_extract(basename(.), "[:upper:]+"),
+    revised = str_detect(basename(.),"_revised")
+  )) 
+ 
+```
+
+
+```{r}
+all_works_tidy_string <- all_works_refined %>%
+  group_by(title, date, code) %>% 
+  mutate(text = gsub("[‘’]", "'", text)) %>% 
+  mutate(text =str_squish(text)) %>% 
+    mutate(work_length = str_count(text, "\\S+")) %>%
+  mutate(type = ifelse(work_length > 40000, "novel", "short_story")) %>% 
+  mutate(cleaned = str_to_lower(str_squish(text))) %>% 
+  mutate(cleaned = str_replace_all(cleaned, "—", " - ")) %>% 
+  mutate(cleaned = str_replace_all(cleaned, "\\p{Punct}", "p"))
+  
+  
+  
+
+```
+
+```{r}
+# cleaned_text <- all_works_tidy_string %>% 
+#                   unnest_tokens(text, text) %>%
+#   summarize(cleaned = str_c(text, collapse = " ")) %>% 
+#                 select(code, cleaned)
+```
+
+
+
+
+```{r}
+dy_works_tidy_short <- all_works_tidy_string %>% 
+                      filter(code!="ZZ") %>% 
+                      filter(code!="RQ") %>% 
+                      filter(title!="hamlet")
+
+
+```
+
+```{r}
+
+```
+
+
+```{r}
+# Import dy_event_data and change column names to eliminate capital letters and spaces.
+
+dy_events_data <- read_csv("processed_data/dy_database_flattened_2023_6_29.csv") %>% 
+                  rename_with( ~ tolower(str_replace_all(.x,"\\s+|\\p{Punct}", "_")))
+                  
+```
+
+```{r}
+#Clean up the event data and build begin and end word vectors
+
+dy_events_data_short <- dy_events_data %>%
+  select(sourcetexttitle,
+         sourcetextcode,
+         first_8_10_words_of_event,
+         nid,
+         orderwithinpage) %>%
+  rename(begin_word = first_8_10_words_of_event)  %>%
+  relocate(begin_word, .after = last_col()) %>%
+  rename(code = sourcetextcode) %>%
+  distinct(nid, .keep_all = TRUE) %>%
+  group_by(sourcetexttitle) %>%
+  
+  arrange(orderwithinpage, .by_group =
+            TRUE) %>%
+  
+  mutate(end_word = ifelse(code ==
+                             lead(code), lead(begin_word), ""),
+         .after = begin_word) %>%
+  mutate(end_word = ifelse(is.na(end_word), "END_END_END", end_word)) %>% 
+  mutate(begin_word_cleaned = str_to_lower(str_squish(begin_word))) %>% 
+  mutate(end_word_cleaned = str_to_lower(str_squish(end_word))) %>% 
+  mutate(begin_word_cleaned = str_replace_all(begin_word_cleaned, "\\p{Punct}", "p")) %>% 
+  mutate(end_word_cleaned = str_replace_all(end_word_cleaned,"\\p{Punct}", "p")) %>% 
+  ungroup()
+                                        
+```
+
+
+
+
+
+```{r}
+dy_texts_events <-  dy_works_tidy_short %>% 
+                    left_join(dy_events_data_short)
+```
+
+
+```{r}
+dy_text_event_indexed <- dy_texts_events %>% 
+                          mutate(begin_index = str_locate(cleaned, begin_word_cleaned)[,1]) %>% 
+                          mutate(end_index = str_locate(cleaned, end_word_cleaned)[,1])
+```
+
+
+```{r}
+dy_text_event_indexed_NA <- dy_text_event_indexed %>% 
+                            filter(is.na(begin_index)) %>% 
+                            select(begin_word,begin_word_cleaned, orderwithinpage)
+```
+
+```{r}
+dy_text_event_sentences <- dy_text_event_indexed %>% 
+                            mutate(sentence = str_sub(text,begin_index,end_index-1))
+```
+
