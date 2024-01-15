@@ -100,7 +100,13 @@ all_works_noabbreviation <- all_works_clean_import %>%
   mutate(cleaned = str_replace_all(cleaned, "Mrs\\.", "Mrs ")) %>%
   mutate(cleaned = str_replace_all (cleaned, "\\.\\.\\.", " punctellipse ")) %>%
   mutate(cleaned = str_replace_all (cleaned, "\\.\\s\\.\\s\\.\\s", " punctellipse ")) 
+
 ```
+
+```{r}
+#ellipse_count find unicode character \u2026
+```
+
 
 
 ### Secondary Descriptions
