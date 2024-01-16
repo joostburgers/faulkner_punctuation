@@ -19,103 +19,90 @@ library(rmdformats)
 ```
 
 
-### Import the full text of *Absalom, Absalom!*
+### Import texts
 
-*Note*: Due to copyright the full text of *Absalom, Absalom!* has been left out of the repository. 
+*Note*: Due to copyright the full text of all texts have been left out of the repository. The texts used were OCR scans and other digital versions. On occassion, scan artifacts and other textual corruptions required editing to match the sentences in the Digital Yoknapatawpha database. This had no effect on the actual word count-per-event.
 
 ```{r import_refined_text_files}
 
-all_works_refined <-
-  list.files(file.path("refined_text_data"), full.names = TRUE, pattern = "*.txt") %>% #grab a list of all the files with .txt extension
-  #the full.names value needs to set to TRUE to get the full path. For some reason you will get a "permission denied" error if you do not do this.
-  map_df(~ tibble(  #the map function performs the same command on all parts of the data set. In this case the .txt files
-    text = read_file(.), #read the files
-    date = ifelse(
-      str_detect(basename(.), "[:digit:]{4}") == TRUE,
-      str_extract(basename(.), "[:digit:]{4}"),
-      NA), #see if there is a date in yyyy format, i.e. 1987, and extract the date, if it can't find date NA
-    title=str_extract(basename(.), "(?<=_)[:alpha:]*"),
-    code=str_extract(basename(.), "[:upper:]+"),
-    revised = str_detect(basename(.),"_revised")
-  )) 
- 
-```
-
-
-```{r}
-#This is temporary to check data
-
-all_works_refined <- all_works_refined %>%
-                      filter( code !="R") %>% 
-filter( code!="RQ") %>% 
-                           mutate(text = rm_abbreviation(text, replacement = "abbreviationremoved ")) %>% 
-  mutate(text = str_replace_all(text, "Mr\\.", "Mr ")) %>%
-  mutate(text = str_replace_all(text, "Mrs\\.", "Mrs ")) %>% 
-  mutate(text = str_replace_all (text, "\\.\\.\\.", " punctellipse ")) %>%
-  mutate(text = str_replace_all (text, "\\.\\s\\.\\s\\.\\s", " punctellipse ")) %>% 
-  mutate(text = str_replace_all(text,"\u2026", " punctellipse "))
-
+# List all files with .txt extension in the "refined_text_data" directory
+all_works_refined <- list.files(file.path("refined_text_data"),
+                                full.names = TRUE,
+                                pattern = "*.txt") %>%
+  # Set full.names to TRUE to get the complete file paths, preventing "permission denied" errors
+  map_df(
+    ~ tibble(
+      # Use the map function to perform the same command on all parts of the data set (i.e., .txt files)
+      text = read_file(.),
+      # Read the content of the files
+      date = ifelse(
+        # Check if the filename contains a four-digit year (yyyy) and extract it; otherwise, set to NA
+        str_detect(basename(.), "[:digit:]{4}") == TRUE,
+        str_extract(basename(.), "[:digit:]{4}"),
+        NA
+      ),
+      title = str_extract(basename(.), "(?<=_)[:alpha:]*"),
+      # Extract titles from filenames
+      code = str_extract(basename(.), "[:upper:]+"),
+      # Extract uppercase codes from filenames
+      revised = str_detect(basename(.), "_revised") # Check if the filename contains "_revised"
+    )
+  )
 
 ```
 
-```{r}
-actual_ellipse <- all_works_refined %>%
-                  group_by(code) %>% 
-                  mutate(real_ellipse=str_count(text,"\u2026")) %>% 
-                          select(!text)
+### Filter texts
+
+For this analysis several texts were excluded: *Requiem for a Nun*, the appendix to *Sound and the Fury*, *The Reivers*. The first two are not technically novels or short stories and the formatting distorts sentence length. There is no digital version of the *The Reivers* that matches the latest version used for the database. As such, the text events cannot properly reconstructed without severely adulterating the text.
+
+```{r filter_texts}
+
+all_works_refined_filtered <- all_works_refined %>%
+  filter(code != "R") %>%
+  filter(code != "RQ")
 ```
 
+## Tidy Texts
+
+There are various features of the text files that cause issues with determining sentence length. They are abbreviations, titles with a period such as Mr. and Mrs., and ellipses. These have all been edited, so that the sentences in each text can be properly delimited.
 
 
-```{r}
+```{r tidy_texts}
 all_works_tidy_string <- all_works_refined %>%
-  group_by(title, date, code) %>% 
-  #mutate(text = gsub("[‘’]", "'", text)) %>% 
-  mutate(text =str_squish(text)) %>%
-  mutate(text = str_replace_all(text, "—", " - ")) %>%  
+  group_by(title, date, code) %>%
+  mutate(text = rm_abbreviation(text, replacement = "abbreviationremoved ")) %>%
+  mutate(text = str_replace_all(text, "Mr\\.", "Mr ")) %>%
+  mutate(text = str_replace_all(text, "Mrs\\.", "Mrs ")) %>%
+  mutate(text = str_replace_all (text, "\\.\\.\\.", " punctellipse ")) %>%
+  mutate(text = str_replace_all (text, "\\.\\s\\.\\s\\.\\s", " punctellipse ")) %>%
+  mutate(text = str_replace_all(text, "\u2026", " punctellipse ")) %>%
+  mutate(text = str_squish(text)) %>%
+  mutate(text = str_replace_all(text, "—", " - ")) %>%
   mutate(work_length = str_count(text, "\\S+")) %>%
-  mutate(type = ifelse(work_length > 40000, "novel", "short_story")) %>% 
-  mutate(cleaned = str_to_lower(text)) %>% 
-  
+  mutate(type = ifelse(work_length > 40000, "novel", "short_story")) %>%
+  mutate(cleaned = str_to_lower(text)) %>%
   mutate(cleaned = str_replace_all(cleaned, "\\p{Punct}", "p"))
   
-  
-  
-
 ```
 
-```{r}
-# cleaned_text <- all_works_tidy_string %>% 
-#                   unnest_tokens(text, text) %>%
-#   summarize(cleaned = str_c(text, collapse = " ")) %>% 
-#                 select(code, cleaned)
-```
+## Import event data
 
+The event data has been grabbed from the latest database extraction. As the delimiting of event data has been stable for some time, there is no need to update this. The only thing that changes from year to year is the number of keywords entered by event.
 
-
-
-```{r}
-dy_works_tidy_short <- all_works_tidy_string %>% 
-                      filter(code!="ZZ") %>% 
-                      filter(code!="RQ") 
-
-
-```
-
-```{r}
-
-```
-
-
-```{r}
+```{r import_event_data}
 # Import dy_event_data and change column names to eliminate capital letters and spaces.
 
 dy_events_data <- read_csv("processed_data/dy_database_flattened_2023_6_29.csv") %>% 
-                  rename_with( ~ tolower(str_replace_all(.x,"\\s+|\\p{Punct}", "_")))
+                  rename_with( ~ tolower(str_replace_all(.x,"\\s+|\\p{Punct}", "_"))) %>% 
+  filter(sourcetextcode != "R") %>%
+  filter(sourcetextcode != "RQ")
                   
 ```
+## Create Begin and End Columns
 
-```{r}
+The event data needs to be modified to create a begin and end column. As this data is from the database, the text needs to be changed to matches the changes already implemented in the texts otherwise it will not be able to find the index. Thi means replacing titles, abbreviations, and ellipses. Two helper columns `begin_word_cleaned` and `end_word_cleaned` are also created. These columns are in lower case and all punctuation is converted to the letter p as a place holder. This has to do with the unicode character for punctuation marks not necessarily matching. As we only need the index to extract the sentence, it does not matter what this random letter is. 
+
+```{r dy_events_data_short}
 #Clean up the event data and build begin and end word vectors
 
 dy_events_data_short <- dy_events_data %>%
@@ -131,8 +118,8 @@ dy_events_data_short <- dy_events_data %>%
   mutate(begin_word = str_replace_all(begin_word, "Mrs\\.", "Mrs ")) %>%
   mutate(begin_word = str_replace_all (begin_word, "\\.\\.\\.", " punctellipse ")) %>%
   mutate(begin_word = str_replace_all (begin_word, "\\.\\s\\.\\s\\.\\s", " punctellipse ")) %>%
-  mutate(begin_word = str_replace_all(begin_word, "\u2026", " punctellipse ")) %>% 
-mutate(begin_word = str_replace_all(begin_word, "—", " - ")) %>%
+  mutate(begin_word = str_replace_all(begin_word, "\u2026", " punctellipse ")) %>%
+  mutate(begin_word = str_replace_all(begin_word, "—", " - ")) %>%
   rename(code = sourcetextcode) %>%
   distinct(nid, .keep_all = TRUE) %>%
   group_by(sourcetexttitle) %>%
@@ -140,8 +127,7 @@ mutate(begin_word = str_replace_all(begin_word, "—", " - ")) %>%
             TRUE) %>%
   mutate(end_word = ifelse(code ==
                              lead(code), lead(begin_word), ""),
-         .after = begin_word) %>%
-  mutate(end_word = ifelse(is.na(end_word), "END_END_END", end_word)) %>%
+         .after = begin_word) %>% 
   mutate(begin_word_cleaned = str_to_lower(str_squish(begin_word))) %>%
   mutate(end_word_cleaned = str_to_lower(str_squish(end_word))) %>%
   mutate(begin_word_cleaned = str_replace_all(begin_word_cleaned, "\\p{Punct}", "p")) %>%
@@ -151,145 +137,216 @@ mutate(begin_word = str_replace_all(begin_word, "—", " - ")) %>%
 ```
 
 
+## Join Events with Texts
+
+The cleaned up texts are joined to the event data. This sets them up to be matched.
 
 
-
-```{r}
-dy_texts_events <-  dy_works_tidy_short %>% 
-                    left_join(dy_events_data_short, by="code")
+```{r dy_texts_events}
+dy_texts_events <-  all_works_tidy_string %>% 
+                    left_join(dy_events_data_short, by="code") 
 ```
 
+## Located Indexes
 
-```{r}
+The code below searches for the location of the start of the event in the full text and returns the index. Because the last event of any text is always `NA` because there is no more text, the value is set to the last index value of the full text.
+
+```{r dy_text_event_indexed}
 dy_text_event_indexed <- dy_texts_events %>% 
                           mutate(begin_index = str_locate(cleaned, begin_word_cleaned)[,1]) %>% 
-                          mutate(end_index = str_locate(cleaned, end_word_cleaned)[,1])
-```
-
-```{r}
-dy_text_event_indexed_aa_text <-  dy_text_event_indexed %>% 
-                                  filter(code=="AA") %>% 
-                                  distinct(cleaned)
-```
-
-```{r}
-write_lines(dy_text_event_indexed_aa_text$cleaned,"absalom_sample.txt")
-```
-
-
-```{r}
-dy_text_event_indexed_NA <- dy_text_event_indexed %>% 
-                            filter(is.na(begin_index)) %>% 
-                            select(begin_word,begin_word_cleaned, orderwithinpage)
-```
-
-```{r}
-dy_text_event_sentences <- dy_text_event_indexed %>% 
-                            mutate(sentence = str_sub(text,begin_index,end_index-1))
+                          mutate(end_index = str_locate(cleaned, end_word_cleaned)[,1]) %>% 
+              mutate(end_index = ifelse(is.na(end_index), str_length(text), end_index )) 
 ```
 
 
 
+
 ```{r}
-all_works_sentence_index <- all_works_tidy_string %>% 
-                            
-                            group_by(code,date) %>% 
-                            rowwise() %>%
+# dy_text_event_indexed_aa_text <-  dy_text_event_indexed %>% 
+#                                   filter(code=="AA") %>% 
+#                                   distinct(cleaned)
+```
+
+```{r}
+# write_lines(dy_text_event_indexed_aa_text$cleaned,"absalom_sample.txt")
+```
+
+
+```{r dy_text_event_indexed_NA}
+#This helper function checks for any sentences that cannot be matched. There should be 0 observations, meaning that everything matched.
+
+dy_text_event_indexed_NA <- dy_text_event_indexed %>%
+  filter(is.na(begin_index)) %>%
+  select(begin_word, begin_word_cleaned, orderwithinpage)
+
+
+```
+## Extract Event Text
+
+The following function uses the begin and end index to retrieve the full event string from the unadulterated text.
+
+
+```{r dy_text_event_sentences}
+dy_text_event_sentences <- dy_text_event_indexed %>%
+  mutate(sentence = str_sub(text, begin_index, end_index -
+                          1)) 
+                          
+```
+
+## Extract sentences indexes
+
+This code sequences uses some shortcuts to arrive at the begin and end index of each sentences. First, each sentence is extracted. A sentence here is defined as any text between end-punctuation marks. It does not deal with the more complex issue of sentences that contain quotations that then themselves are quotations.
+
+Once the sentences are established, these are unnested rowwise to create a very long table of a character per row. By setting the character index to `row_number()`, it is possible to keep track of the position of a character. Using `distinct()` grabs the first instance of each sentence, and therefore the beginning index. The end index is obviously the beginning index of the next sentence -1. With the indexes in place, the number of words in the string are counted. 
+
+```{r all_works_sentence_index}
+all_works_sentence_index <- all_works_tidy_string %>%
+  group_by(code, date) %>%
+  rowwise() %>%
   mutate(sentences = str_extract_all(text, "[^.!?]+[.!?]+\"?")) %>%
-  unnest(cols = sentences) %>% 
-  select(!text) %>% 
-  select(!cleaned) %>% 
-   mutate(sentence_index=row_number()) %>% 
-  group_by(code, sentences, sentence_index) %>% 
-  unnest_characters(characters, sentences, strip_non_alphanum = FALSE, to_lower = FALSE, drop= FALSE) %>% 
-  group_by(code) %>% 
-  select(!characters) %>% 
-  mutate(begin_sentence_index = row_number()) %>% 
-  distinct(sentences, .keep_all = TRUE) %>% 
-  mutate(end_sentence_index = lead(begin_sentence_index)-1) %>% 
-  mutate(end_sentence_index = if_else(is.na(end_sentence_index),begin_sentence_index+str_length(sentences),end_sentence_index)) %>% 
-  mutate(string_length = str_count(sentences, pattern="\\s+"))
+  unnest(cols = sentences) %>%
+  select(!text) %>%
+  select(!cleaned) %>%
+  mutate(sentence_index = row_number()) %>%
+  group_by(code, sentences, sentence_index) %>%
+  unnest_characters(
+    characters,
+    sentences,
+    strip_non_alphanum = FALSE,
+    to_lower = FALSE,
+    drop = FALSE
+  ) %>%
+  group_by(code) %>%
+  select(!characters) %>%
+  mutate(begin_sentence_index = row_number()) %>%
+  distinct(sentences, .keep_all = TRUE) %>%
+  mutate(end_sentence_index = lead(begin_sentence_index) - 1) %>%
+  mutate(
+    end_sentence_index = if_else(
+      is.na(end_sentence_index),
+      begin_sentence_index + str_length(sentences),
+      end_sentence_index
+    )
+  ) %>%
+  mutate(string_length = str_count(sentences, pattern = "\\s+"))
                                
 ```
 
+## Reduce Event Sentences
 
-```{r}
+The full text and cleaned text can be dropped from the `dy_text_event_sentences` table as they consume too much memory.
+
+```{r dy_text_event_sentencs}
 dy_text_event_sentences_compact <- dy_text_event_sentences %>% 
-                                    select(!c(text,cleaned))
+                                    select(!c(text,cleaned)) 
 
 
 ```
 
-
 ```{r}
+#these are errors in the way it is fetching events. 
+
+check_events <- dy_text_event_sentences_compact %>% 
+                filter(begin_index>end_index)
+```
+
+
+
+## Join events and sentences
+
+The following join and filter finds which sentences appear in which events. This is generally the preferable way to think about it, because sentences tend to be shorter than events.
+
+
+
+```{r sentences_in_events}
 sentences_in_events <- all_works_sentence_index %>%
   inner_join(dy_text_event_sentences_compact, by = NULL, copy = TRUE) %>%
   filter(begin_sentence_index >= begin_index, end_sentence_index <= end_index) %>% 
   select(!c(begin_word_cleaned, end_word_cleaned))
 ```
+The opposite relationship is also true, though less frequently. Some long sentences encompassing quite a number of events. The script below accounts for this contingency.
 
-```{r}
-demographic <- read_csv("processed_data/dy_database_flattened_2023_6_29.csv")
+```{r events_in_sentences}
+events_in_sentences <- all_works_sentence_index %>%
+  inner_join(dy_text_event_sentences_compact, by = NULL, copy = TRUE) %>% 
+  filter(begin_index>=begin_sentence_index, end_index<=end_sentence_index) %>% 
+  select(!c(begin_word_cleaned, end_word_cleaned))
+
+
+```
+We can then make these two figures one giant table.
+
+```{r all_events_sentences}
+
+all_events_sentences <- sentences_in_events %>% 
+                        bind_rows(events_in_sentences) 
+
 ```
 
-```{r}
-short_demographic <- demographic %>%
+## Import demographic
+
+We can now create datatable with all of the demographic info. This table is already loaded into memory and filtered with `dy_events_data`. We can take a different part of the table to create the demographic data. Some low frequency data has been filtered out, because it did not produce relevant data. For example, there are only two `asian` characters who ever appear in the corpus. 
+
+
+```{r short_demographic}
+short_demographic <- dy_events_data %>%
   select(
-    SourceTextTitle,
-    SourceTextCode,
-    PageNumber,
-    Nid,
-    PresentMentioned,
-    Race,
-    Gender,
-    Class,
-    Rank,
-    IndividualGroup
+    sourcetexttitle,
+    sourcetextcode,
+    pagenumber,
+    nid,
+    presentmentioned,
+    charactername,
+    race,
+    gender,
+    class,
+    rank,
+    individualgroup
     ) %>%
-  filter(PresentMentioned == "Present") %>%
-  filter(IndividualGroup=="Individual") %>% 
-  filter(str_detect(Gender,"Group",negate= TRUE))
+  mutate(class = ifelse(class=="Indian Chief", "Indian Tribal Leader", class)) %>% 
+  filter(race != "Asian") %>% 
+  filter(presentmentioned == "Present") %>%
+  filter(individualgroup=="Individual") %>% 
+  filter(str_detect(gender,"Group",negate= TRUE))
 ```
 
+We can generate a `race_class_gender` variable and then count if that variable occurs in a particular event. Since multiple characters appear in an event and since this also means that, for example, multiple lower class women can appear, the occurrence matrix only counts present or absent, but not total as this would lead to double counting. 
 
-```{r}
-
-race_demographic <- short_demographic %>%
-  group_by(SourceTextCode, Nid) %>%
-  pivot_wider(
-    id_cols = c(SourceTextCode, PageNumber, Nid),
-    names_from = Race,
-    values_from = Gender,
-    values_fn = list(Gender = length),
-    names_prefix = "race_"
-  )  
-       
-```
-
-
-```{r}
+```{r raceclassgender_demographic}
 raceclassgender_demographic <- short_demographic %>%
-  mutate(race_class_gender = paste(Race, Class, Gender, sep ="_")) %>%
+  mutate(race_class_gender = paste(race, class, gender, sep ="_")) %>%
   mutate(race_class_gender = tolower(str_replace_all(race_class_gender, " ", "_"))) %>%
-  group_by(SourceTextCode, Nid) %>%
+  group_by(sourcetextcode, nid) %>%
   pivot_wider(
-    id_cols = c(SourceTextCode, PageNumber, Nid),
+    id_cols = c(sourcetextcode, pagenumber, nid),
     names_from = race_class_gender,
-    values_from = Gender,
-    values_fn = list(Gender = length),
+    values_from = gender,
+    values_fn = list(gender = function(x) ifelse(length(x) > 0, 1, 0)),
     names_prefix = "all_"
   ) %>%
   rename_with( ~ tolower(gsub(" ", "_", .x, fixed = TRUE))) %>%
   ungroup()
 ```
 
-```{r}
-sentence_demographics <- sentences_in_events %>% 
-                          left_join(raceclassgender_demographic, by="nid") %>% 
-mutate(across(starts_with("all"), ~ . * string_length))
+Join the demographics with the events and the sentences and multiply each demographic unit by string length. Simply stated, if there are no white male characters in an event this will not add to their string lenght. Alternatively, if a type of character is present that string length is added. Thus, the result is a vector of all of the strings that each type of character occurred in and how long these strings are.
+
+
+```{r sentence_demographics}
+sentence_demographics <- all_events_sentences %>%
+  left_join(raceclassgender_demographic, by = "nid") %>%
+  mutate(across(starts_with("all"), ~ . * string_length)) %>%
+  distinct(sentences, .keep_all = TRUE)
 
 
 ```
+
+```{r}
+# event_in_sentence_demographics <- events_in_sentences %>% 
+#   left_join(raceclassgender_demographic, by="nid")  
+# mutate(across(starts_with("all"), ~ . * string_length))
+```
+
+Calculate the mean, median, max, and sum of each character type.
 
 ```{r}
 average_sentence_length <- sentence_demographics %>% 
@@ -304,7 +361,71 @@ average_sentence_length <- sentence_demographics %>%
                names_to = c("variable", "statistic"), 
                names_pattern = "(.+)_(.+)") %>%
   pivot_wider(names_from = "statistic", values_from = "value")
-  
 
+```
+
+This produces quite a number of values, each character type, in fact. This is not always the most relevant. Since on occassion, a character only occurs once in a long sentence. Instead, we want characters who appear fairly frequently. The bar for this can be set to anything, but a very generous proportion of the mean being 10% of the sum was used. So these characters still appear infrequently, but have long average sentences.
+
+```{r}
+average_sentence_length_filter <- average_sentence_length %>% 
+                                  mutate(percent = mean/sum) %>% 
+                                  filter(percent<.01)
+```
+
+
+
+
+```{r}
+names_demographic <- short_demographic %>%
+  group_by(sourcetextcode, nid) %>%
+  pivot_wider(
+    id_cols = c(sourcetextcode, pagenumber, nid),
+    names_from = charactername,
+    values_from = gender,
+    values_fn = list(gender = function(x) ifelse(length(x) > 0, 1, 0)),
+    names_prefix = "all_"
+  ) %>% 
+rename_with(~ make.unique(tolower(gsub(" ", "_", .x, fixed = TRUE))), .cols = everything()) %>% 
+  ungroup()
+```
+
+
+
+```{r}
+names_length <- all_events_sentences %>% 
+  left_join(names_demographic, by = "nid") %>%
+  mutate(across(starts_with("all"), ~ . * string_length)) %>%
+  distinct(sentences, .keep_all = TRUE)
+```
+
+
+```{r}
+character_sentence_length <- names_length %>%
+  ungroup() %>%
+  filter(code != "RQ") %>%
+  select(starts_with("all")) %>%
+  summarise(across(
+    everything(),
+    list(
+      mean = ~ mean(.x, na.rm = TRUE),
+      median = ~ median(.x, na.rm = TRUE),
+      max = ~ max(.x, na.rm = TRUE),
+      sum = ~ sum(.x, na.rm = TRUE)
+    )
+  )) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = c("variable", "statistic"),
+    names_pattern = "(.+)_(.+)"
+  ) %>%
+  pivot_wider(names_from = "statistic", values_from = "value") %>%
+  filter(mean != sum)
+
+ 
+```
+```{r}
+character_sentence_length_weighted <- character_sentence_length %>% 
+                                      mutate(percent = mean/sum) %>% 
+                                      filter(percent<.01)
 ```
 
