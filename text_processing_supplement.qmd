@@ -429,3 +429,18 @@ character_sentence_length_weighted <- character_sentence_length %>%
                                       filter(percent<.01)
 ```
 
+
+```{r}
+keywords_sentences <- dy_events_data %>%
+  select(nid, starts_with("kw_")) %>% 
+  group_by(nid) %>% 
+   pivot_longer(cols = starts_with("kw_") ) %>% 
+   separate_rows(value, sep = "\\|") %>% 
+   group_by(nid,name)  
+   
+
+
+
+
+```
+
