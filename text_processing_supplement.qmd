@@ -305,7 +305,7 @@ short_demographic <- dy_events_data %>%
     ) %>%
   mutate(class = ifelse(class=="Indian Chief", "Indian Tribal Leader", class)) %>% 
   filter(race != "Asian") %>% 
-  filter(presentmentioned == "Present") %>%
+  # filter(presentmentioned == "Mentioned") %>%
   filter(individualgroup=="Individual") %>% 
   filter(str_detect(gender,"Group",negate= TRUE))
 ```
@@ -316,9 +316,9 @@ We can generate a `race_class_gender` variable and then count if that variable o
 raceclassgender_demographic <- short_demographic %>%
   mutate(race_class_gender = paste(race, class, gender, sep ="_")) %>%
   mutate(race_class_gender = tolower(str_replace_all(race_class_gender, " ", "_"))) %>%
-  group_by(sourcetextcode, nid) %>%
+  group_by(sourcetextcode, presentmentioned, nid) %>%
   pivot_wider(
-    id_cols = c(sourcetextcode, pagenumber, nid),
+    id_cols = c(sourcetextcode, presentmentioned, pagenumber, nid),
     names_from = race_class_gender,
     values_from = gender,
     values_fn = list(gender = function(x) ifelse(length(x) > 0, 1, 0)),
@@ -328,17 +328,168 @@ raceclassgender_demographic <- short_demographic %>%
   ungroup()
 ```
 
-Join the demographics with the events and the sentences and multiply each demographic unit by string length. Simply stated, if there are no white male characters in an event this will not add to their string lenght. Alternatively, if a type of character is present that string length is added. Thus, the result is a vector of all of the strings that each type of character occurred in and how long these strings are.
+Join the demographics with the events and the sentences and multiply each demographic unit by string length. Simply stated, if there are no white male characters in an event this will not add to their string lenght. Alternatively, if a type of character is present that string length is added. Thus, the result is a vector of all of the strings that each type of character occurred in and how long these strings are. Each distinct sentence should be kept to prevent double counting.
 
 
 ```{r sentence_demographics}
-sentence_demographics <- all_events_sentences %>%
+sentence_demographics_raw <- all_events_sentences %>%
   left_join(raceclassgender_demographic, by = "nid") %>%
-  mutate(across(starts_with("all"), ~ . * string_length)) %>%
-  distinct(sentences, .keep_all = TRUE)
+  mutate(across(starts_with("all"), ~ . * string_length)) 
+  
 
 
 ```
+
+```{r}
+sentence_demographics_present <- sentence_demographics_raw %>% 
+                                    filter(presentmentioned=="Present") %>% 
+  distinct(sentences, .keep_all = TRUE)
+```
+
+
+```{r}
+sentence_demographics_mentioned <- sentence_demographics_raw %>% 
+                                   filter(presentmentioned=="Mentioned") %>% distinct(sentences, .keep_all = TRUE)
+
+```
+
+```{r}
+sentence_demographics_both <- all_events_sentences %>%
+  left_join(raceclassgender_demographic, by = "nid") %>%
+  mutate(across(starts_with("all"), ~ . * string_length)) %>% 
+  distinct(sentences, .keep_all = TRUE)
+```
+
+
+
+```{r correlation_present}
+
+present_correlation_matrix_remove <- sentence_demographics_present %>%
+  ungroup() %>%
+  select_if(is.numeric)  %>%
+  select(starts_with("all_")) %>%
+  pivot_longer(starts_with("all_"),
+               names_to = "names",
+               values_to = "count") %>%
+  drop_na(count) %>%
+  group_by(names) %>%
+  summarize(count = n()) %>%
+  filter(count > 1)
+
+correlation_matrix_present <- sentence_demographics_present %>%
+  ungroup() %>%
+  select(present_correlation_matrix_remove$names) %>%
+  mutate_all( ~ ifelse(is.na(.), 0, .))
+
+correlation_present <-  map(names(correlation_matrix_present), ~ {
+  test_result <-
+    cor.test(
+      sentence_demographics_present$string_length,
+     correlation_matrix_present[[.x]],
+      method = "pearson"
+    )
+  tibble(
+    character_type = .x,
+    cor_coefficient = round(test_result$estimate, 4),
+    p_value = test_result$p.value,
+  )
+}) %>% bind_rows() %>%
+  unnest_wider(cor_coefficient) %>% 
+  mutate(presentmentioned="Present", .before=1) %>% 
+  # filter(column!="string_length") %>%
+  filter(p_value < .5) %>%
+  filter(cor > .2 | cor < -.2)
+
+```
+
+
+```{r}
+mentioned_correlation_matrix_remove <- sentence_demographics_mentioned %>%
+  ungroup() %>%
+  select_if(is.numeric)  %>%
+  select(starts_with("all_")) %>%
+  pivot_longer(starts_with("all_"),
+               names_to = "names",
+               values_to = "count") %>%
+  drop_na(count) %>%
+  group_by(names) %>%
+  summarize(count = n()) %>%
+  filter(count > 1)
+
+correlation_matrix_mentioned <- sentence_demographics_mentioned %>%
+  ungroup() %>%
+  select(mentioned_correlation_matrix_remove$names) %>%
+  mutate_all(~ ifelse(is.na(.), 0, .))
+
+correlation_mentioned <-
+  map(names(correlation_matrix_mentioned), ~ {
+    test_result <-
+      cor.test(
+        sentence_demographics_mentioned$string_length,
+        correlation_matrix_mentioned[[.x]],
+        method = "pearson"
+      )
+    tibble(
+      character_type = .x,
+      cor_coefficient = round(test_result$estimate, 4),
+      p_value = test_result$p.value,
+    )
+  }) %>% bind_rows() %>%
+  unnest_wider(cor_coefficient) %>%
+  mutate(presentmentioned = "Mentioned", .before = 1) %>%
+  filter(character_type != "string_length") %>%
+  filter(p_value < .5) %>%
+  filter(cor > .2 | cor < -.2)
+```
+
+
+
+```{r}
+both_correlation_matrix_remove <- sentence_demographics_both %>%
+  ungroup() %>%
+  select_if(is.numeric)  %>%
+  select(starts_with("all_")) %>%
+  pivot_longer(starts_with("all_"),
+               names_to = "names",
+               values_to = "count") %>%
+  drop_na(count) %>%
+  group_by(names) %>%
+  summarize(count = n()) %>%
+  filter(count > 1)
+
+correlation_matrix_both <- sentence_demographics_both %>%
+  ungroup() %>%
+  select(both_correlation_matrix_remove$names) %>%
+  mutate_all(~ ifelse(is.na(.), 0, .))
+
+correlation_both <-
+  map(names(correlation_matrix_both), ~ {
+    test_result <-
+      cor.test(
+        sentence_demographics_both$string_length,
+        correlation_matrix_both[[.x]],
+        method = "pearson"
+      )
+    tibble(
+      character_type = .x,
+      cor_coefficient = round(test_result$estimate, 4),
+      p_value = test_result$p.value,
+    )
+  }) %>% bind_rows() %>%
+  unnest_wider(cor_coefficient) %>%
+  mutate(presentmentioned = "Both", .before = 1) %>%
+  filter(character_type != "string_length") %>%
+  filter(p_value < .5) %>%
+  filter(cor > .2 | cor < -.2)
+```
+
+
+```{r}
+all_correlation <- correlation_present %>% 
+                    bind_rows(correlation_mentioned) %>% 
+                    bind_rows(correlation_both)
+```
+
 
 ```{r}
 # event_in_sentence_demographics <- events_in_sentences %>% 
@@ -349,7 +500,7 @@ sentence_demographics <- all_events_sentences %>%
 Calculate the mean, median, max, and sum of each character type.
 
 ```{r}
-average_sentence_length <- sentence_demographics %>% 
+average_sentence_length <- sentence_demographics_both %>% 
                             ungroup() %>% 
                             filter(code!="RQ") %>% 
                             select(starts_with("all")) %>%
@@ -379,7 +530,7 @@ average_sentence_length_filter <- average_sentence_length %>%
 names_demographic <- short_demographic %>%
   group_by(sourcetextcode, nid) %>%
   pivot_wider(
-    id_cols = c(sourcetextcode, pagenumber, nid),
+    id_cols = c(sourcetextcode, presentmentioned, pagenumber, nid),
     names_from = charactername,
     values_from = gender,
     values_fn = list(gender = function(x) ifelse(length(x) > 0, 1, 0)),
@@ -392,15 +543,155 @@ rename_with(~ make.unique(tolower(gsub(" ", "_", .x, fixed = TRUE))), .cols = ev
 
 
 ```{r}
-names_length <- all_events_sentences %>% 
+names_length_raw <- all_events_sentences %>% 
   left_join(names_demographic, by = "nid") %>%
-  mutate(across(starts_with("all"), ~ . * string_length)) %>%
+  mutate(across(starts_with("all"), ~ . * string_length)) 
+```
+
+
+```{r}
+names_length_present <- names_length_raw %>% 
+                             filter(presentmentioned=="Present") %>% 
+  distinct(sentences, .keep_all = TRUE)
+```
+
+```{r}
+names_present_correlation_matrix_remove <- names_length_present %>%
+  ungroup() %>%
+  select_if(is.numeric)  %>%
+  select(starts_with("all_")) %>%
+  pivot_longer(starts_with("all_"),
+               names_to = "names",
+               values_to = "count") %>%
+  drop_na(count) %>%
+  group_by(names) %>%
+  summarize(count = n()) %>%
+  filter(count > 1)
+
+correlation_matrix_names_present <- names_length_present %>%
+  ungroup() %>%
+  select(names_present_correlation_matrix_remove$names) %>%
+  mutate_all( ~ ifelse(is.na(.), 0, .))
+
+correlation_names_present <-  map(names(correlation_matrix_names_present), ~ {
+  test_result <-
+    cor.test(
+      names_length_present$string_length,
+     correlation_matrix_names_present[[.x]],
+      method = "pearson"
+    )
+  tibble(
+    character_name = .x,
+    cor_coefficient = round(test_result$estimate, 4),
+    p_value = test_result$p.value,
+  )
+}) %>% bind_rows() %>%
+  unnest_wider(cor_coefficient) %>% 
+  mutate(presentmentioned="Present", .before=1) %>% 
+  # filter(column!="string_length") %>%
+  filter(p_value < .5) %>%
+  filter(cor > .2 | cor < -.2)
+```
+
+
+```{r}
+names_length_mentioned <- names_length_raw %>% 
+                             filter(presentmentioned=="Mentioned") %>% 
   distinct(sentences, .keep_all = TRUE)
 ```
 
 
 ```{r}
-character_sentence_length <- names_length %>%
+names_mentioned_correlation_matrix_remove <- names_length_mentioned %>%
+  ungroup() %>%
+  select_if(is.numeric)  %>%
+  select(starts_with("all_")) %>%
+  pivot_longer(starts_with("all_"),
+               names_to = "names",
+               values_to = "count") %>%
+  drop_na(count) %>%
+  group_by(names) %>%
+  summarize(count = n()) %>%
+  filter(count > 1)
+
+correlation_matrix_names_mentioned <- names_length_mentioned %>%
+  ungroup() %>%
+  select(names_mentioned_correlation_matrix_remove$names) %>%
+  mutate_all( ~ ifelse(is.na(.), 0, .))
+
+correlation_names_mentioned <-  map(names(correlation_matrix_names_mentioned), ~ {
+  test_result <-
+    cor.test(
+      names_length_mentioned$string_length,
+     correlation_matrix_names_mentioned[[.x]],
+      method = "pearson"
+    )
+  tibble(
+    character_name = .x,
+    cor_coefficient = round(test_result$estimate, 4),
+    p_value = test_result$p.value,
+  )
+}) %>% bind_rows() %>%
+  unnest_wider(cor_coefficient) %>% 
+  mutate(presentmentioned="Mentioned", .before=1) %>% 
+  # filter(column!="string_length") %>%
+  filter(p_value < .5) %>%
+  filter(cor > .2 | cor < -.2)
+```
+
+```{r}
+names_length_both <- names_length_raw %>% 
+                 
+  distinct(sentences, .keep_all = TRUE)
+```
+
+```{r}
+names_both_correlation_matrix_remove <- names_length_both %>%
+  ungroup() %>%
+  select_if(is.numeric)  %>%
+  select(starts_with("all_")) %>%
+  pivot_longer(starts_with("all_"),
+               names_to = "names",
+               values_to = "count") %>%
+  drop_na(count) %>%
+  group_by(names) %>%
+  summarize(count = n()) %>%
+  filter(count > 1)
+
+correlation_matrix_names_both <- names_length_both %>%
+  ungroup() %>%
+  select(names_both_correlation_matrix_remove$names) %>%
+  mutate_all( ~ ifelse(is.na(.), 0, .))
+
+correlation_names_both <-  map(names(correlation_matrix_names_both), ~ {
+  test_result <-
+    cor.test(
+      names_length_both$string_length,
+     correlation_matrix_names_both[[.x]],
+      method = "pearson"
+    )
+  tibble(
+    character_name = .x,
+    cor_coefficient = round(test_result$estimate, 4),
+    p_value = test_result$p.value,
+  )
+}) %>% bind_rows() %>%
+  unnest_wider(cor_coefficient) %>% 
+  mutate(presentmentioned="Both", .before=1) %>% 
+  # filter(column!="string_length") %>%
+  filter(p_value < .5) %>%
+  filter(cor > .2 | cor < -.2)
+```
+
+```{r}
+all_names_correlation <- correlation_names_present %>% 
+                          bind_rows(correlation_names_mentioned) %>% bind_rows(correlation_names_both)
+```
+
+
+
+```{r}
+character_sentence_length <- names_length_both %>%
   ungroup() %>%
   filter(code != "RQ") %>%
   select(starts_with("all")) %>%
@@ -431,16 +722,153 @@ character_sentence_length_weighted <- character_sentence_length %>%
 
 
 ```{r}
-keywords_sentences <- dy_events_data %>%
-  select(nid, starts_with("kw_")) %>% 
-  group_by(nid) %>% 
-   pivot_longer(cols = starts_with("kw_") ) %>% 
-   separate_rows(value, sep = "\\|") %>% 
-   group_by(nid,name)  
+keywords <- dy_events_data %>%
+  group_by(sourcetextcode, nid, gender, pagenumber) %>%  
+  pivot_longer(cols = starts_with("kw_"), names_to = "keywords", names_prefix = "kw_", values_to = "second_term") %>% 
+    separate_rows(second_term, sep=" \\| ") %>% 
+    mutate(third_term = str_extract(second_term, "(?<=\\> ).*")) %>% 
+    mutate(second_term = str_remove(second_term, "(?<= ).*")) %>% 
+    mutate(second_term = str_squish(second_term)) %>% 
+    mutate(single_term = ifelse(!is.na(second_term),second_term,keywords)) %>% 
+    mutate(single_term = ifelse(!is.na(third_term), third_term, single_term)) %>% 
+    mutate(root_term = paste(keywords, 
+        ifelse(!is.na(second_term), paste(" : ", second_term, sep=""),""),                            ifelse(!is.na(third_term), paste(" :: ",third_term, sep=""),""),                               sep = "")) %>% 
+select(sourcetextcode, nid, gender, keywords, second_term, third_term, single_term) %>% 
+  drop_na(second_term)
    
 
 
 
 
+```
+
+```{r}
+keywords_second_term <- keywords %>%
+  select(sourcetextcode, nid, gender, second_term) %>% 
+  group_by(sourcetextcode, gender, pagenumber, nid) %>% 
+  pivot_wider(
+    id_cols = c(sourcetextcode, nid),
+    names_from = second_term,
+    values_from = gender,
+    values_fn = list(gender = function(x) ifelse(length(x) > 0, 1, 0)),
+    names_prefix = "all_"
+  ) %>% 
+rename_with(~ make.unique(tolower(gsub(" ", "_", .x, fixed = TRUE))), .cols = everything()) %>% 
+  ungroup()
+```
+
+
+
+```{r}
+count_keywords <-  keywords_sentences %>% 
+                    count(keywords, second_term, third_term)
+```
+
+```{r}
+keywords_second_term_sentences <- all_events_sentences %>% 
+  left_join(keywords_second_term, by = "nid") %>%
+  mutate(across(starts_with("all"), ~ . * string_length)) %>% 
+  distinct(sentences, .keep_all = TRUE)
+```
+
+
+
+```{r}
+second_term_correlation_matrix_remove <- keywords_second_term_sentences %>%
+  ungroup() %>%
+  select_if(is.numeric)  %>%
+  select(starts_with("all_")) %>%
+  pivot_longer(starts_with("all_"),
+               names_to = "names",
+               values_to = "count") %>%
+  drop_na(count) %>%
+  group_by(names) %>%
+  summarize(count = n()) %>%
+  filter(count > 1)
+
+correlation_matrix_second_term <- keywords_second_term_sentences %>%
+  ungroup() %>%
+  select(second_term_correlation_matrix_remove$names) %>%
+  mutate_all( ~ ifelse(is.na(.), 0, .))
+
+correlation_second_term <-  map(names(correlation_matrix_second_term), ~ {
+  test_result <-
+    cor.test(
+      keywords_second_term_sentences$string_length,
+    correlation_matrix_second_term[[.x]],
+      method = "pearson"
+    )
+  tibble(
+    keyword = .x,
+    cor_coefficient = round(test_result$estimate, 4),
+    p_value = test_result$p.value,
+  )
+}) %>% bind_rows() %>%
+  unnest_wider(cor_coefficient) %>% 
+  mutate(presentmentioned="second_term", .before=1) %>% 
+  # filter(column!="string_length") %>%
+  filter(p_value < .5) %>%
+  filter(cor > .2 | cor < -.2)
+```
+
+
+```{r}
+keywords_third_term <- keywords %>%
+  select(sourcetextcode, nid, gender, third_term) %>% 
+  group_by(sourcetextcode, gender, pagenumber, nid) %>% 
+  pivot_wider(
+    id_cols = c(sourcetextcode, nid),
+    names_from = third_term,
+    values_from = gender,
+    values_fn = list(gender = function(x) ifelse(length(x) > 0, 1, 0)),
+    names_prefix = "all_"
+  ) %>% 
+rename_with(~ make.unique(tolower(gsub(" ", "_", .x, fixed = TRUE))), .cols = everything()) %>% 
+  ungroup()
+```
+
+```{r}
+keywords_third_term_sentences <- all_events_sentences %>% 
+  left_join(keywords_third_term, by = "nid") %>%
+  mutate(across(starts_with("all"), ~ . * string_length)) %>% 
+  distinct(sentences, .keep_all = TRUE)
+```
+
+```{r}
+third_term_correlation_matrix_remove <- keywords_third_term_sentences %>%
+  ungroup() %>%
+  select_if(is.numeric)  %>%
+  select(starts_with("all_")) %>%
+  pivot_longer(starts_with("all_"),
+               names_to = "names",
+               values_to = "count") %>%
+  drop_na(count) %>%
+  group_by(names) %>%
+  summarize(count = n()) %>%
+  filter(count > 1)
+
+correlation_matrix_third_term <- keywords_third_term_sentences %>%
+  ungroup() %>%
+  select(third_term_correlation_matrix_remove$names) %>%
+  mutate_all( ~ ifelse(is.na(.), 0, .))
+
+correlation_third_term <-  map(names(correlation_matrix_third_term), ~ {
+  test_result <-
+    cor.test(
+      keywords_third_term_sentences$string_length,
+    correlation_matrix_third_term[[.x]],
+      method = "pearson"
+    )
+  tibble(
+    keyword = .x,
+    cor_coefficient = round(test_result$estimate, 4),
+    p_value = test_result$p.value,
+  )
+}) %>% bind_rows() %>%
+  unnest_wider(cor_coefficient) %>% 
+  mutate(presentmentioned="third_term", .before=1) %>% 
+  # filter(column!="string_length") %>%
+  filter(p_value < .5) %>%
+  filter(cor > .2 | cor < -.2)
 ```
 
