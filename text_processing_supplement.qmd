@@ -462,7 +462,8 @@ sentence_demographics_both <- all_events_sentences %>%
 
 ```{r correlation_present}
 
-present_correlation_matrix_remove <- sentence_demographics_present %>%
+present_correlation_matrix_remove <-
+  sentence_demographics_present %>%
   ungroup() %>%
   select_if(is.numeric)  %>%
   select(starts_with("all_")) %>%
@@ -472,19 +473,19 @@ present_correlation_matrix_remove <- sentence_demographics_present %>%
   drop_na(count) %>%
   group_by(names) %>%
   summarize(count = n()) %>%
-  filter(count > 1) %>% 
+  filter(count > 1) %>%
   select(names)
 
 correlation_matrix_present <- sentence_demographics_present %>%
   ungroup() %>%
   select(present_correlation_matrix_remove$names) %>%
-  mutate_all( ~ ifelse(is.na(.), 0, .))
+  mutate_all(~ ifelse(is.na(.), 0, .))
 
 correlation_present <-  map(names(correlation_matrix_present), ~ {
   test_result <-
     cor.test(
       sentence_demographics_present$string_length,
-     correlation_matrix_present[[.x]],
+      correlation_matrix_present[[.x]],
       method = "pearson"
     )
   tibble(
@@ -493,8 +494,8 @@ correlation_present <-  map(names(correlation_matrix_present), ~ {
     p_value = test_result$p.value,
   )
 }) %>% bind_rows() %>%
-  unnest_wider(cor_coefficient) %>% 
-  mutate(presentmentioned="Present", .before=1) %>% 
+  unnest_wider(cor_coefficient) %>%
+  mutate(presentmentioned = "Present", .before = 1) %>%
   # filter(column!="string_length") %>%
   filter(p_value < .5) %>%
   filter(cor > .2 | cor < -.2)
@@ -502,10 +503,10 @@ correlation_present <-  map(names(correlation_matrix_present), ~ {
 ```
 
 
-```{r}
+```{r correlation_by_work}
 
 
-present_correlation_matrix_remove <- sentence_demographics_present %>%
+correlation_work_present_remove <- sentence_demographics_present %>%
   select_if(is.numeric) %>%
   select(starts_with("all_")) %>%
   pivot_longer(starts_with("all_"),
@@ -517,8 +518,8 @@ present_correlation_matrix_remove <- sentence_demographics_present %>%
   filter(count > 1) %>%
   pull(character_type)
 
-correlation_matrix_present_work <- sentence_demographics_present %>%
-  select(code, string_length, all_of(present_correlation_matrix_remove)) %>%
+correlation_work_present <- sentence_demographics_present %>%
+  select(code, string_length, all_of(correlation_work_present_remove)) %>%
   group_by(code) %>%
   replace(is.na(.), 0) %>% 
  summarise(across(starts_with("all_"), 
@@ -526,7 +527,7 @@ correlation_matrix_present_work <- sentence_demographics_present %>%
                         p_value = ~ cor.test(string_length, ., use = "complete.obs")$p.value),
                    .names = "{.col}_{.fn}"))
 
-correlation_matrix_long_present <- correlation_matrix %>%
+correlation_work_present_result <- correlation_work_present %>%
   pivot_longer(cols = starts_with("all_"),
                names_to = "name") %>% 
                 drop_na() %>% 
@@ -549,7 +550,7 @@ correlation_matrix_long_present <- correlation_matrix %>%
 
 
 
-```{r}
+```{r correlation_mentioned}
 mentioned_correlation_matrix_remove <- sentence_demographics_mentioned %>%
   ungroup() %>%
   select_if(is.numeric)  %>%
@@ -588,6 +589,48 @@ correlation_mentioned <-
   filter(p_value < .5) %>%
   filter(cor > .2 | cor < -.2)
 ```
+
+```{r correlation_work_mentioned}
+
+correlation_work_mentioned_remove <- sentence_demographics_mentioned %>%
+  select_if(is.numeric) %>%
+  select(starts_with("all_")) %>%
+  pivot_longer(starts_with("all_"),
+               names_to = "character_type",
+               values_to = "count") %>%
+  drop_na(count) %>%
+  group_by(character_type) %>%
+  summarise(count = n()) %>%
+  filter(count > 1) %>%
+  pull(character_type)
+
+correlation_work_mentioned <- sentence_demographics_mentioned %>%
+  select(code, string_length, all_of(correlation_work_mentioned_remove)) %>%
+  group_by(code) %>%
+  replace(is.na(.), 0) %>% 
+ summarise(across(starts_with("all_"), 
+                   list(cor_coefficient = ~ cor(string_length, ., use = "complete.obs"),
+                        p_value = ~ cor.test(string_length, ., use = "complete.obs")$p.value),
+                   .names = "{.col}_{.fn}"))
+
+correlation_work_mentioned_result <- correlation_work_mentioned %>%
+  pivot_longer(cols = starts_with("all_"),
+               names_to = "name") %>% 
+                drop_na() %>% 
+               mutate(correlation_cof= ifelse(str_detect(name, "_cor"),value,NA)) %>% 
+                mutate(p_value=ifelse(str_detect(name, "_p"),value,NA)) %>%                  mutate(name=str_remove_all(name,"_cor_coefficient")) %>% 
+  mutate(name=str_remove_all(name,"_p_value")) %>% 
+  mutate(name=str_remove_all(name, "all_")) %>% 
+  mutate(p_value=ifelse(name==lead(name), lead(value),NA)) %>% 
+  drop_na() %>% 
+  filter(p_value<.05) %>% 
+    filter(correlation_cof>.5 | correlation_cof< -.5) %>% 
+  add_count(name) %>% 
+  mutate(presentmentioned="Mentioned")
+
+```
+
+
 
 ```{r}
 both_correlation_matrix_remove <- sentence_demographics_both %>%
@@ -630,6 +673,48 @@ correlation_both <-
 ```
 
 ```{r}
+
+correlation_work_both_remove <- sentence_demographics_both %>%
+  select_if(is.numeric) %>%
+  select(starts_with("all_")) %>%
+  pivot_longer(starts_with("all_"),
+               names_to = "character_type",
+               values_to = "count") %>%
+  drop_na(count) %>%
+  group_by(character_type) %>%
+  summarise(count = n()) %>%
+  filter(count > 1) %>%
+  pull(character_type)
+
+correlation_work_both <- sentence_demographics_both %>%
+  select(code, string_length, all_of(correlation_work_both_remove)) %>%
+  group_by(code) %>%
+  replace(is.na(.), 0) %>% 
+ summarise(across(starts_with("all_"), 
+                   list(cor_coefficient = ~ cor(string_length, ., use = "complete.obs"),
+                        p_value = ~ cor.test(string_length, ., use = "complete.obs")$p.value),
+                   .names = "{.col}_{.fn}"))
+
+correlation_work_both_result <- correlation_work_both %>%
+  pivot_longer(cols = starts_with("all_"),
+               names_to = "name") %>% 
+                drop_na() %>% 
+               mutate(correlation_cof= ifelse(str_detect(name, "_cor"),value,NA)) %>% 
+                mutate(p_value=ifelse(str_detect(name, "_p"),value,NA)) %>%                  mutate(name=str_remove_all(name,"_cor_coefficient")) %>% 
+  mutate(name=str_remove_all(name,"_p_value")) %>% 
+  mutate(name=str_remove_all(name, "all_")) %>% 
+  mutate(p_value=ifelse(name==lead(name), lead(value),NA)) %>% 
+  drop_na() %>% 
+  filter(p_value<.05) %>% 
+    filter(correlation_cof>.5 | correlation_cof< -.5) %>% 
+  add_count(name) %>% 
+  mutate(presentmentioned="Both")
+
+```
+
+
+
+```{r all_correlation}
 all_correlation <- correlation_present %>% 
                     bind_rows(correlation_mentioned) %>% 
                     bind_rows(correlation_both)
