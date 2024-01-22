@@ -4,9 +4,23 @@ format: html
 editor: visual
 ---
 
-## Part 1: Pre-processing
+
+```{r}
+# knitr::opts_chunk$set(cache = TRUE, warning = FALSE, 
+#                       message = FALSE, cache.lazy = FALSE)
+```
+
+
+# Introduction
+
+The following supplement provides the script for processing the texts and the calculations for the article: "Faulkner and the Politics of the Long Sentence." Due to copyright restrictions, the raw text data and the flattened *Digital Yoknapatawpha* database are not available in this github repository. The results of the processing are available in the folder `processed_data`.
+
+# Part 1: Pre-processing
+
+Textual pre-processing implements some common procedures for cleaning up the text including removing abbreviations, standardizing quote marks, and, in general, removing artifacts that skew calculations.
 
 ### Import libraries
+
 ```{r libraries}
 library(tidyverse)
 library(tidytext)
@@ -18,13 +32,13 @@ library(qdapRegex )
 library(rmdformats)
 ```
 
-
 ### Import texts
 
-*Note*: Due to copyright the full text of all texts have been left out of the repository. The texts used were OCR scans and other digital versions. On occassion, scan artifacts and other textual corruptions required editing to match the sentences in the Digital Yoknapatawpha database. This had no effect on the actual word count-per-event.
+*Note*: Due to copyright the full text of all texts have been left out of the repository. The texts used were OCR scans and other digital versions. On occasion, scan artifacts and other textual corruptions required editing to match the sentences in the Digital Yoknapatawpha database. This had no effect on the actual word count-per-event.
 
 ```{r import_refined_text_files}
-
+#| eval: false
+#| include: false
 # List all files with .txt extension in the "refined_text_data" directory
 all_works_refined <- list.files(file.path("refined_text_data"),
                                 full.names = TRUE,
@@ -56,7 +70,8 @@ all_works_refined <- list.files(file.path("refined_text_data"),
 For this analysis several texts were excluded: *Requiem for a Nun*, the appendix to *Sound and the Fury*, *The Reivers*. The first two are not technically novels or short stories and the formatting distorts sentence length. There is no digital version of the *The Reivers* that matches the latest version used for the database. As such, the text events cannot properly reconstructed without severely adulterating the text.
 
 ```{r filter_texts}
-
+#| eval: false
+#| include: false
 all_works_refined_filtered <- all_works_refined %>%
   filter(code != "R") %>%
   filter(code != "RQ")
@@ -66,8 +81,10 @@ all_works_refined_filtered <- all_works_refined %>%
 
 There are various features of the text files that cause issues with determining sentence length. They are abbreviations, titles with a period such as Mr. and Mrs., and ellipses. These have all been edited, so that the sentences in each text can be properly delimited.
 
-
 ```{r tidy_texts}
+#| eval: false
+#| include: false
+
 all_works_tidy_string <- all_works_refined %>%
   group_by(title, date, code) %>%
   mutate(text = rm_abbreviation(text, replacement = "abbreviationremoved ")) %>%
@@ -85,22 +102,115 @@ all_works_tidy_string <- all_works_refined %>%
   
 ```
 
-## Import event data
+```{r export_tidy_string}
+#| eval: false
+#| include: false
+write_csv(all_works_tidy_string,"temporary_text/all_works_tidy_string.csv")
+
+```
+
+```{r}
+all_works_tidy_string_import <- read_csv("temporary_text/all_works_tidy_string.csv")
+```
+
+
+## Create Database
+
+Import the database files
+
+```{r preprocessing}
+#| eval: false
+#| include: false
+
+characters <- read_csv("dy_database/characters.csv")
+locations <- read_csv("dy_database/locations.csv")
+events <- read_csv("dy_database/events.csv")
+```
+
+filter out relevant data columns
+
+```{r clean_character}
+#| eval: false
+#| include: false
+
+characters_clean <- characters %>%
+  select(SourceTextTitle:Family, Biography, Nid:IndividualGroup) %>%
+  rename(CharacterID = Nid)
+```
+
+filter out location columns
+
+```{r clean_locations}
+#| eval: false
+#| include: false
+
+locations_clean <- locations %>%
+  select(SourceTextTitle:Description, `True X`:Region) %>%
+  rename_with( ~ gsub(" ", "_", .x, fixed = TRUE)) %>%
+  mutate(across(contains('_'),  ~ as.numeric(gsub(" ", "", .)))) %>%
+  mutate(True_X = coalesce(True_X, Cemetery_X)) %>%
+  mutate(True_Y = coalesce(True_Y, Cemetery_Y)) %>%
+  select(!(Cemetery_X:Cemetery_Y)) %>%
+  rename(LocationCode = LocationKey)
+```
+
+filter out events columns
+
+```{r events_clean}
+#| eval: false
+#| include: false
+
+events_clean <- events %>%
+  select(!c(Body:y, Keywords)) %>%
+  pivot_longer(
+    c(CharactersPresent, CharactersMentioned),
+    names_to = "PresentMentioned",
+    values_to = "CharacterID"
+  ) %>%
+  separate_rows(CharacterID, sep = ",") %>%
+  mutate(CharacterID = as.numeric(str_trim(CharacterID))) %>%
+  mutate(PresentMentioned = str_remove_all(PresentMentioned, "Characters")) %>%
+  drop_na(CharacterID)
+
+```
+
+
+
+```{r full_database}
+#| eval: false
+#| include: false
+
+database_full <- events_clean %>% 
+                 left_join(characters_clean) %>% 
+                 left_join(locations_clean)  
+
+```
+
+```{r}
+#| eval: false
+#| include: false
+
+write_csv(database_full, "processed_data/dy_database_flattened_2024_1_21.csv")
+
+```
+
+
 
 The event data has been grabbed from the latest database extraction. As the delimiting of event data has been stable for some time, there is no need to update this. The only thing that changes from year to year is the number of keywords entered by event.
 
 ```{r import_event_data}
 # Import dy_event_data and change column names to eliminate capital letters and spaces.
 
-dy_events_data <- read_csv("processed_data/dy_database_flattened_2023_6_29.csv") %>% 
+dy_events_data <- read_csv("processed_data/dy_database_flattened_2024_1_21.csv") %>% 
                   rename_with( ~ tolower(str_replace_all(.x,"\\s+|\\p{Punct}", "_"))) %>% 
   filter(sourcetextcode != "R") %>%
   filter(sourcetextcode != "RQ")
                   
 ```
+
 ## Create Begin and End Columns
 
-The event data needs to be modified to create a begin and end column. As this data is from the database, the text needs to be changed to matches the changes already implemented in the texts otherwise it will not be able to find the index. Thi means replacing titles, abbreviations, and ellipses. Two helper columns `begin_word_cleaned` and `end_word_cleaned` are also created. These columns are in lower case and all punctuation is converted to the letter p as a place holder. This has to do with the unicode character for punctuation marks not necessarily matching. As we only need the index to extract the sentence, it does not matter what this random letter is. 
+The event data needs to be modified to create a begin and end column. As this data is from the database, the text needs to be changed to matches the changes already implemented in the texts otherwise it will not be able to find the index. Thi means replacing titles, abbreviations, and ellipses. Two helper columns `begin_word_cleaned` and `end_word_cleaned` are also created. These columns are in lower case and all punctuation is converted to the letter p as a place holder. This has to do with the unicode character for punctuation marks not necessarily matching. As we only need the index to extract the sentence, it does not matter what this random letter is.
 
 ```{r dy_events_data_short}
 #Clean up the event data and build begin and end word vectors
@@ -136,14 +246,12 @@ dy_events_data_short <- dy_events_data %>%
 
 ```
 
-
 ## Join Events with Texts
 
 The cleaned up texts are joined to the event data. This sets them up to be matched.
 
-
 ```{r dy_texts_events}
-dy_texts_events <-  all_works_tidy_string %>% 
+dy_texts_events <-  all_works_tidy_string_import %>% 
                     left_join(dy_events_data_short, by="code") 
 ```
 
@@ -152,25 +260,12 @@ dy_texts_events <-  all_works_tidy_string %>%
 The code below searches for the location of the start of the event in the full text and returns the index. Because the last event of any text is always `NA` because there is no more text, the value is set to the last index value of the full text.
 
 ```{r dy_text_event_indexed}
-dy_text_event_indexed <- dy_texts_events %>% 
-                          mutate(begin_index = str_locate(cleaned, begin_word_cleaned)[,1]) %>% 
-                          mutate(end_index = str_locate(cleaned, end_word_cleaned)[,1]) %>% 
-              mutate(end_index = ifelse(is.na(end_index), str_length(text), end_index )) 
+dy_text_event_indexed <- dy_texts_events %>%
+  mutate(begin_index = str_locate(cleaned, begin_word_cleaned)[, 1]) %>%
+  mutate(end_index = str_locate(cleaned, end_word_cleaned)[, 1]) %>%
+  mutate(end_index = ifelse(is.na(end_index), str_length(text), end_index)) %>% 
+   select(!c(text,cleaned)) 
 ```
-
-
-
-
-```{r}
-# dy_text_event_indexed_aa_text <-  dy_text_event_indexed %>% 
-#                                   filter(code=="AA") %>% 
-#                                   distinct(cleaned)
-```
-
-```{r}
-# write_lines(dy_text_event_indexed_aa_text$cleaned,"absalom_sample.txt")
-```
-
 
 ```{r dy_text_event_indexed_NA}
 #This helper function checks for any sentences that cannot be matched. There should be 0 observations, meaning that everything matched.
@@ -181,15 +276,16 @@ dy_text_event_indexed_NA <- dy_text_event_indexed %>%
 
 
 ```
+
 ## Extract Event Text
 
 The following function uses the begin and end index to retrieve the full event string from the unadulterated text.
 
-
 ```{r dy_text_event_sentences}
-dy_text_event_sentences <- dy_text_event_indexed %>%
-  mutate(sentence = str_sub(text, begin_index, end_index -
-                          1)) 
+#This is not longer a necessary function since the indexes take care of this. 
+# dy_text_event_sentences <- dy_text_event_indexed %>%
+#   mutate(sentence = str_sub(text, begin_index, end_index -
+#                           1)) 
                           
 ```
 
@@ -197,10 +293,10 @@ dy_text_event_sentences <- dy_text_event_indexed %>%
 
 This code sequences uses some shortcuts to arrive at the begin and end index of each sentences. First, each sentence is extracted. A sentence here is defined as any text between end-punctuation marks. It does not deal with the more complex issue of sentences that contain quotations that then themselves are quotations.
 
-Once the sentences are established, these are unnested rowwise to create a very long table of a character per row. By setting the character index to `row_number()`, it is possible to keep track of the position of a character. Using `distinct()` grabs the first instance of each sentence, and therefore the beginning index. The end index is obviously the beginning index of the next sentence -1. With the indexes in place, the number of words in the string are counted. 
+Once the sentences are established, these are unnested rowwise to create a very long table of a character per row. By setting the character index to `row_number()`, it is possible to keep track of the position of a character. Using `distinct()` grabs the first instance of each sentence, and therefore the beginning index. The end index is obviously the beginning index of the next sentence -1. With the indexes in place, the number of words in the string are counted.
 
 ```{r all_works_sentence_index}
-all_works_sentence_index <- all_works_tidy_string %>%
+all_works_sentence_index <- all_works_tidy_string_import %>%
   group_by(code, date) %>%
   rowwise() %>%
   mutate(sentences = str_extract_all(text, "[^.!?]+[.!?]+\"?")) %>%
@@ -237,8 +333,8 @@ all_works_sentence_index <- all_works_tidy_string %>%
 The full text and cleaned text can be dropped from the `dy_text_event_sentences` table as they consume too much memory.
 
 ```{r dy_text_event_sentencs}
-dy_text_event_sentences_compact <- dy_text_event_sentences %>% 
-                                    select(!c(text,cleaned)) 
+# dy_text_event_sentences_compact <- dy_text_event_sentences %>% 
+#                                     select(!c(text,cleaned)) 
 
 
 ```
@@ -246,47 +342,51 @@ dy_text_event_sentences_compact <- dy_text_event_sentences %>%
 ```{r}
 #these are errors in the way it is fetching events. 
 
-check_events <- dy_text_event_sentences_compact %>% 
+check_events <- dy_text_event_indexed %>% 
                 filter(begin_index>end_index)
 ```
-
-
 
 ## Join events and sentences
 
 The following join and filter finds which sentences appear in which events. This is generally the preferable way to think about it, because sentences tend to be shorter than events.
 
-
-
 ```{r sentences_in_events}
 sentences_in_events <- all_works_sentence_index %>%
-  inner_join(dy_text_event_sentences_compact, by = NULL, copy = TRUE) %>%
+  inner_join(dy_text_event_indexed, by = NULL, copy = TRUE) %>%
   filter(begin_sentence_index >= begin_index, end_sentence_index <= end_index) %>% 
   select(!c(begin_word_cleaned, end_word_cleaned))
 ```
+
 The opposite relationship is also true, though less frequently. Some long sentences encompassing quite a number of events. The script below accounts for this contingency.
 
 ```{r events_in_sentences}
 events_in_sentences <- all_works_sentence_index %>%
-  inner_join(dy_text_event_sentences_compact, by = NULL, copy = TRUE) %>% 
+  inner_join(dy_text_event_indexed, by = NULL, copy = TRUE) %>% 
   filter(begin_index>=begin_sentence_index, end_index<=end_sentence_index) %>% 
   select(!c(begin_word_cleaned, end_word_cleaned))
 
 
 ```
+
 We can then make these two figures one giant table.
 
 ```{r all_events_sentences}
 
 all_events_sentences <- sentences_in_events %>% 
-                        bind_rows(events_in_sentences) 
+                        bind_rows(events_in_sentences) %>% 
+                        select(!c(begin_word, end_word))
 
 ```
 
+```{r}
+write_csv(all_events_sentences,"temporary_text/all_events_sentences.csv")
+```
+
+
+
 ## Import demographic
 
-We can now create datatable with all of the demographic info. This table is already loaded into memory and filtered with `dy_events_data`. We can take a different part of the table to create the demographic data. Some low frequency data has been filtered out, because it did not produce relevant data. For example, there are only two `asian` characters who ever appear in the corpus. 
-
+We can now create datatable with all of the demographic info. This table is already loaded into memory and filtered with `dy_events_data`. We can take a different part of the table to create the demographic data. Some low frequency data has been filtered out, because it did not produce relevant data. For example, there are only two `asian` characters who ever appear in the corpus.
 
 ```{r short_demographic}
 short_demographic <- dy_events_data %>%
@@ -310,7 +410,7 @@ short_demographic <- dy_events_data %>%
   filter(str_detect(gender,"Group",negate= TRUE))
 ```
 
-We can generate a `race_class_gender` variable and then count if that variable occurs in a particular event. Since multiple characters appear in an event and since this also means that, for example, multiple lower class women can appear, the occurrence matrix only counts present or absent, but not total as this would lead to double counting. 
+We can generate a `race_class_gender` variable and then count if that variable occurs in a particular event. Since multiple characters appear in an event and since this also means that, for example, multiple lower class women can appear, the occurrence matrix only counts present or absent, but not total as this would lead to double counting.
 
 ```{r raceclassgender_demographic}
 raceclassgender_demographic <- short_demographic %>%
@@ -330,7 +430,6 @@ raceclassgender_demographic <- short_demographic %>%
 
 Join the demographics with the events and the sentences and multiply each demographic unit by string length. Simply stated, if there are no white male characters in an event this will not add to their string lenght. Alternatively, if a type of character is present that string length is added. Thus, the result is a vector of all of the strings that each type of character occurred in and how long these strings are. Each distinct sentence should be kept to prevent double counting.
 
-
 ```{r sentence_demographics}
 sentence_demographics_raw <- all_events_sentences %>%
   left_join(raceclassgender_demographic, by = "nid") %>%
@@ -345,7 +444,6 @@ sentence_demographics_present <- sentence_demographics_raw %>%
                                     filter(presentmentioned=="Present") %>% 
   distinct(sentences, .keep_all = TRUE)
 ```
-
 
 ```{r}
 sentence_demographics_mentioned <- sentence_demographics_raw %>% 
@@ -374,7 +472,8 @@ present_correlation_matrix_remove <- sentence_demographics_present %>%
   drop_na(count) %>%
   group_by(names) %>%
   summarize(count = n()) %>%
-  filter(count > 1)
+  filter(count > 1) %>% 
+  select(names)
 
 correlation_matrix_present <- sentence_demographics_present %>%
   ungroup() %>%
@@ -404,6 +503,53 @@ correlation_present <-  map(names(correlation_matrix_present), ~ {
 
 
 ```{r}
+
+
+present_correlation_matrix_remove <- sentence_demographics_present %>%
+  select_if(is.numeric) %>%
+  select(starts_with("all_")) %>%
+  pivot_longer(starts_with("all_"),
+               names_to = "character_type",
+               values_to = "count") %>%
+  drop_na(count) %>%
+  group_by(character_type) %>%
+  summarise(count = n()) %>%
+  filter(count > 1) %>%
+  pull(character_type)
+
+correlation_matrix_present_work <- sentence_demographics_present %>%
+  select(code, string_length, all_of(present_correlation_matrix_remove)) %>%
+  group_by(code) %>%
+  replace(is.na(.), 0) %>% 
+ summarise(across(starts_with("all_"), 
+                   list(cor_coefficient = ~ cor(string_length, ., use = "complete.obs"),
+                        p_value = ~ cor.test(string_length, ., use = "complete.obs")$p.value),
+                   .names = "{.col}_{.fn}"))
+
+correlation_matrix_long_present <- correlation_matrix %>%
+  pivot_longer(cols = starts_with("all_"),
+               names_to = "name") %>% 
+                drop_na() %>% 
+               mutate(correlation_cof= ifelse(str_detect(name, "_cor"),value,NA)) %>% 
+                mutate(p_value=ifelse(str_detect(name, "_p"),value,NA)) %>%                  mutate(name=str_remove_all(name,"_cor_coefficient")) %>% 
+  mutate(name=str_remove_all(name,"_p_value")) %>% 
+  mutate(name=str_remove_all(name, "all_")) %>% 
+  mutate(p_value=ifelse(name==lead(name), lead(value),NA)) %>% 
+  drop_na() %>% 
+  filter(p_value<.05) %>% 
+    filter(correlation_cof>.5 | correlation_cof< -.5) %>% 
+  add_count(name) %>% 
+  mutate(presentmentioned="Present")
+
+ 
+
+
+
+```
+
+
+
+```{r}
 mentioned_correlation_matrix_remove <- sentence_demographics_mentioned %>%
   ungroup() %>%
   select_if(is.numeric)  %>%
@@ -414,7 +560,8 @@ mentioned_correlation_matrix_remove <- sentence_demographics_mentioned %>%
   drop_na(count) %>%
   group_by(names) %>%
   summarize(count = n()) %>%
-  filter(count > 1)
+  filter(count > 1) %>% 
+  select(names)
 
 correlation_matrix_mentioned <- sentence_demographics_mentioned %>%
   ungroup() %>%
@@ -442,8 +589,6 @@ correlation_mentioned <-
   filter(cor > .2 | cor < -.2)
 ```
 
-
-
 ```{r}
 both_correlation_matrix_remove <- sentence_demographics_both %>%
   ungroup() %>%
@@ -455,7 +600,8 @@ both_correlation_matrix_remove <- sentence_demographics_both %>%
   drop_na(count) %>%
   group_by(names) %>%
   summarize(count = n()) %>%
-  filter(count > 1)
+  filter(count > 1) %>% 
+  select(names)
 
 correlation_matrix_both <- sentence_demographics_both %>%
   ungroup() %>%
@@ -483,7 +629,6 @@ correlation_both <-
   filter(cor > .2 | cor < -.2)
 ```
 
-
 ```{r}
 all_correlation <- correlation_present %>% 
                     bind_rows(correlation_mentioned) %>% 
@@ -491,26 +636,27 @@ all_correlation <- correlation_present %>%
 ```
 
 
-```{r}
-# event_in_sentence_demographics <- events_in_sentences %>% 
-#   left_join(raceclassgender_demographic, by="nid")  
-# mutate(across(starts_with("all"), ~ . * string_length))
-```
-
 Calculate the mean, median, max, and sum of each character type.
 
 ```{r}
-average_sentence_length <- sentence_demographics_both %>% 
-                            ungroup() %>% 
-                            filter(code!="RQ") %>% 
-                            select(starts_with("all")) %>%
-  summarise(across(everything(), list(mean = ~mean(.x, na.rm = TRUE),
-                                      median = ~median(.x, na.rm = TRUE),
-                                       max = ~max(.x, na.rm = TRUE),
-                                      sum = ~sum(.x, na.rm = TRUE)))) %>% 
-   pivot_longer(cols = everything(), 
-               names_to = c("variable", "statistic"), 
-               names_pattern = "(.+)_(.+)") %>%
+average_sentence_length <- sentence_demographics_both %>%
+  ungroup() %>%
+  filter(code != "RQ") %>%
+  select(starts_with("all")) %>%
+  summarise(across(
+    everything(),
+    list(
+      mean = ~ mean(.x, na.rm = TRUE),
+      median = ~ median(.x, na.rm = TRUE),
+      max = ~ max(.x, na.rm = TRUE),
+      sum = ~ sum(.x, na.rm = TRUE)
+    )
+  )) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = c("variable", "statistic"),
+    names_pattern = "(.+)_(.+)"
+  ) %>%
   pivot_wider(names_from = "statistic", values_from = "value")
 
 ```
@@ -522,9 +668,6 @@ average_sentence_length_filter <- average_sentence_length %>%
                                   mutate(percent = mean/sum) %>% 
                                   filter(percent<.01)
 ```
-
-
-
 
 ```{r}
 names_demographic <- short_demographic %>%
@@ -540,18 +683,15 @@ rename_with(~ make.unique(tolower(gsub(" ", "_", .x, fixed = TRUE))), .cols = ev
   ungroup()
 ```
 
-
-
 ```{r}
 names_length_raw <- all_events_sentences %>% 
   left_join(names_demographic, by = "nid") %>%
   mutate(across(starts_with("all"), ~ . * string_length)) 
 ```
 
-
 ```{r}
-names_length_present <- names_length_raw %>% 
-                             filter(presentmentioned=="Present") %>% 
+names_length_present <- names_length_raw %>%
+  filter(presentmentioned == "Present") %>%
   distinct(sentences, .keep_all = TRUE)
 ```
 
@@ -593,16 +733,15 @@ correlation_names_present <-  map(names(correlation_matrix_names_present), ~ {
   filter(cor > .2 | cor < -.2)
 ```
 
-
 ```{r}
-names_length_mentioned <- names_length_raw %>% 
-                             filter(presentmentioned=="Mentioned") %>% 
+names_length_mentioned <- names_length_raw %>%
+  filter(presentmentioned == "Mentioned") %>%
   distinct(sentences, .keep_all = TRUE)
 ```
 
-
 ```{r}
-names_mentioned_correlation_matrix_remove <- names_length_mentioned %>%
+names_mentioned_correlation_matrix_remove <-
+  names_length_mentioned %>%
   ungroup() %>%
   select_if(is.numeric)  %>%
   select(starts_with("all_")) %>%
@@ -617,31 +756,31 @@ names_mentioned_correlation_matrix_remove <- names_length_mentioned %>%
 correlation_matrix_names_mentioned <- names_length_mentioned %>%
   ungroup() %>%
   select(names_mentioned_correlation_matrix_remove$names) %>%
-  mutate_all( ~ ifelse(is.na(.), 0, .))
+  mutate_all(~ ifelse(is.na(.), 0, .))
 
-correlation_names_mentioned <-  map(names(correlation_matrix_names_mentioned), ~ {
-  test_result <-
-    cor.test(
-      names_length_mentioned$string_length,
-     correlation_matrix_names_mentioned[[.x]],
-      method = "pearson"
+correlation_names_mentioned <-
+  map(names(correlation_matrix_names_mentioned), ~ {
+    test_result <-
+      cor.test(
+        names_length_mentioned$string_length,
+        correlation_matrix_names_mentioned[[.x]],
+        method = "pearson"
+      )
+    tibble(
+      character_name = .x,
+      cor_coefficient = round(test_result$estimate, 4),
+      p_value = test_result$p.value,
     )
-  tibble(
-    character_name = .x,
-    cor_coefficient = round(test_result$estimate, 4),
-    p_value = test_result$p.value,
-  )
-}) %>% bind_rows() %>%
-  unnest_wider(cor_coefficient) %>% 
-  mutate(presentmentioned="Mentioned", .before=1) %>% 
+  }) %>% bind_rows() %>%
+  unnest_wider(cor_coefficient) %>%
+  mutate(presentmentioned = "Mentioned", .before = 1) %>%
   # filter(column!="string_length") %>%
   filter(p_value < .5) %>%
   filter(cor > .2 | cor < -.2)
 ```
 
 ```{r}
-names_length_both <- names_length_raw %>% 
-                 
+names_length_both <- names_length_raw %>%
   distinct(sentences, .keep_all = TRUE)
 ```
 
@@ -661,34 +800,31 @@ names_both_correlation_matrix_remove <- names_length_both %>%
 correlation_matrix_names_both <- names_length_both %>%
   ungroup() %>%
   select(names_both_correlation_matrix_remove$names) %>%
-  mutate_all( ~ ifelse(is.na(.), 0, .))
+  mutate_all(~ ifelse(is.na(.), 0, .))
 
-correlation_names_both <-  map(names(correlation_matrix_names_both), ~ {
-  test_result <-
-    cor.test(
-      names_length_both$string_length,
-     correlation_matrix_names_both[[.x]],
-      method = "pearson"
+correlation_names_both <-
+  map(names(correlation_matrix_names_both), ~ {
+    test_result <-
+      cor.test(names_length_both$string_length,
+               correlation_matrix_names_both[[.x]],
+               method = "pearson")
+    tibble(
+      character_name = .x,
+      cor_coefficient = round(test_result$estimate, 4),
+      p_value = test_result$p.value,
     )
-  tibble(
-    character_name = .x,
-    cor_coefficient = round(test_result$estimate, 4),
-    p_value = test_result$p.value,
-  )
-}) %>% bind_rows() %>%
-  unnest_wider(cor_coefficient) %>% 
-  mutate(presentmentioned="Both", .before=1) %>% 
+  }) %>% bind_rows() %>%
+  unnest_wider(cor_coefficient) %>%
+  mutate(presentmentioned = "Both", .before = 1) %>%
   # filter(column!="string_length") %>%
   filter(p_value < .5) %>%
   filter(cor > .2 | cor < -.2)
 ```
 
 ```{r}
-all_names_correlation <- correlation_names_present %>% 
-                          bind_rows(correlation_names_mentioned) %>% bind_rows(correlation_names_both)
+all_names_correlation <- correlation_names_present %>%
+  bind_rows(correlation_names_mentioned) %>%     bind_rows(correlation_names_both)
 ```
-
-
 
 ```{r}
 character_sentence_length <- names_length_both %>%
@@ -714,67 +850,80 @@ character_sentence_length <- names_length_both %>%
 
  
 ```
-```{r}
-character_sentence_length_weighted <- character_sentence_length %>% 
-                                      mutate(percent = mean/sum) %>% 
-                                      filter(percent<.01)
-```
 
+```{r}
+character_sentence_length_weighted <- character_sentence_length %>%
+  mutate(percent = mean / sum) %>%
+  filter(percent < .01)
+```
 
 ```{r}
 keywords <- dy_events_data %>%
-  group_by(sourcetextcode, nid, gender, pagenumber) %>%  
-  pivot_longer(cols = starts_with("kw_"), names_to = "keywords", names_prefix = "kw_", values_to = "second_term") %>% 
-    separate_rows(second_term, sep=" \\| ") %>% 
-    mutate(third_term = str_extract(second_term, "(?<=\\> ).*")) %>% 
-    mutate(second_term = str_remove(second_term, "(?<= ).*")) %>% 
-    mutate(second_term = str_squish(second_term)) %>% 
-    mutate(single_term = ifelse(!is.na(second_term),second_term,keywords)) %>% 
-    mutate(single_term = ifelse(!is.na(third_term), third_term, single_term)) %>% 
-    mutate(root_term = paste(keywords, 
-        ifelse(!is.na(second_term), paste(" : ", second_term, sep=""),""),                            ifelse(!is.na(third_term), paste(" :: ",third_term, sep=""),""),                               sep = "")) %>% 
-select(sourcetextcode, nid, gender, keywords, second_term, third_term, single_term) %>% 
+  group_by(sourcetextcode, nid, gender, pagenumber) %>%
+  pivot_longer(
+    cols = starts_with("kw_"),
+    names_to = "keywords",
+    names_prefix = "kw_",
+    values_to = "second_term"
+  ) %>%
+  separate_rows(second_term, sep = " \\| ") %>%
+  mutate(third_term = str_extract(second_term, "(?<=\\> ).*")) %>%
+  mutate(second_term = str_remove(second_term, "(?<= ).*")) %>%
+  mutate(second_term = str_squish(second_term)) %>%
+  mutate(single_term = ifelse(!is.na(second_term), second_term, keywords)) %>%
+  mutate(single_term = ifelse(!is.na(third_term), third_term, single_term)) %>%
+  mutate(root_term = paste(
+    keywords,
+    ifelse(!is.na(second_term), paste(" : ", second_term, sep = ""), ""),
+    ifelse(!is.na(third_term), paste(" :: ", third_term, sep =
+                                       ""), ""),
+    sep = ""
+  )) %>%
+  select(sourcetextcode,
+         nid,
+         gender,
+         keywords,
+         second_term,
+         third_term,
+         single_term) %>%
   drop_na(second_term)
-   
-
-
-
+ 
 
 ```
 
 ```{r}
 keywords_second_term <- keywords %>%
-  select(sourcetextcode, nid, gender, second_term) %>% 
-  group_by(sourcetextcode, gender, pagenumber, nid) %>% 
+  select(sourcetextcode, nid, gender, second_term) %>%
+  group_by(sourcetextcode, gender, pagenumber, nid) %>%
   pivot_wider(
     id_cols = c(sourcetextcode, nid),
     names_from = second_term,
     values_from = gender,
-    values_fn = list(gender = function(x) ifelse(length(x) > 0, 1, 0)),
+    values_fn = list(
+      gender = function(x)
+        ifelse(length(x) > 0, 1, 0)
+    ),
     names_prefix = "all_"
-  ) %>% 
-rename_with(~ make.unique(tolower(gsub(" ", "_", .x, fixed = TRUE))), .cols = everything()) %>% 
+  ) %>%
+  rename_with( ~ make.unique(tolower(gsub(" ", "_", .x, fixed = TRUE))), .cols = everything()) %>%
   ungroup()
 ```
 
-
-
 ```{r}
-count_keywords <-  keywords_sentences %>% 
-                    count(keywords, second_term, third_term)
+count_keywords <-  keywords %>%
+  count(keywords, second_term, third_term)
 ```
 
 ```{r}
-keywords_second_term_sentences <- all_events_sentences %>% 
+keywords_second_term_sentences <- all_events_sentences %>%
   left_join(keywords_second_term, by = "nid") %>%
-  mutate(across(starts_with("all"), ~ . * string_length)) %>% 
+  mutate(across(starts_with("all"), ~ . * string_length)) %>%
   distinct(sentences, .keep_all = TRUE)
 ```
 
-
-
 ```{r}
-second_term_correlation_matrix_remove <- keywords_second_term_sentences %>%
+second_term_correlation_matrix_remove <-
+  keywords_second_term_sentences %>%
   ungroup() %>%
   select_if(is.numeric)  %>%
   select(starts_with("all_")) %>%
@@ -789,53 +938,57 @@ second_term_correlation_matrix_remove <- keywords_second_term_sentences %>%
 correlation_matrix_second_term <- keywords_second_term_sentences %>%
   ungroup() %>%
   select(second_term_correlation_matrix_remove$names) %>%
-  mutate_all( ~ ifelse(is.na(.), 0, .))
+  mutate_all(~ ifelse(is.na(.), 0, .))
 
-correlation_second_term <-  map(names(correlation_matrix_second_term), ~ {
-  test_result <-
-    cor.test(
-      keywords_second_term_sentences$string_length,
-    correlation_matrix_second_term[[.x]],
-      method = "pearson"
+correlation_second_term <-
+  map(names(correlation_matrix_second_term), ~ {
+    test_result <-
+      cor.test(
+        keywords_second_term_sentences$string_length,
+        correlation_matrix_second_term[[.x]],
+        method = "pearson"
+      )
+    tibble(
+      keyword = .x,
+      cor_coefficient = round(test_result$estimate, 4),
+      p_value = test_result$p.value,
     )
-  tibble(
-    keyword = .x,
-    cor_coefficient = round(test_result$estimate, 4),
-    p_value = test_result$p.value,
-  )
-}) %>% bind_rows() %>%
-  unnest_wider(cor_coefficient) %>% 
-  mutate(presentmentioned="second_term", .before=1) %>% 
+  }) %>% bind_rows() %>%
+  unnest_wider(cor_coefficient) %>%
+  mutate(presentmentioned = "second_term", .before = 1) %>%
   # filter(column!="string_length") %>%
   filter(p_value < .5) %>%
   filter(cor > .2 | cor < -.2)
 ```
 
-
 ```{r}
 keywords_third_term <- keywords %>%
-  select(sourcetextcode, nid, gender, third_term) %>% 
-  group_by(sourcetextcode, gender, pagenumber, nid) %>% 
+  select(sourcetextcode, nid, gender, third_term) %>%
+  group_by(sourcetextcode, gender, pagenumber, nid) %>%
   pivot_wider(
     id_cols = c(sourcetextcode, nid),
     names_from = third_term,
     values_from = gender,
-    values_fn = list(gender = function(x) ifelse(length(x) > 0, 1, 0)),
+    values_fn = list(
+      gender = function(x)
+        ifelse(length(x) > 0, 1, 0)
+    ),
     names_prefix = "all_"
-  ) %>% 
-rename_with(~ make.unique(tolower(gsub(" ", "_", .x, fixed = TRUE))), .cols = everything()) %>% 
+  ) %>%
+  rename_with( ~ make.unique(tolower(gsub(" ", "_", .x, fixed = TRUE))), .cols = everything()) %>%
   ungroup()
 ```
 
 ```{r}
-keywords_third_term_sentences <- all_events_sentences %>% 
+keywords_third_term_sentences <- all_events_sentences %>%
   left_join(keywords_third_term, by = "nid") %>%
-  mutate(across(starts_with("all"), ~ . * string_length)) %>% 
+  mutate(across(starts_with("all"), ~ . * string_length)) %>%
   distinct(sentences, .keep_all = TRUE)
 ```
 
 ```{r}
-third_term_correlation_matrix_remove <- keywords_third_term_sentences %>%
+third_term_correlation_matrix_remove <-
+  keywords_third_term_sentences %>%
   ungroup() %>%
   select_if(is.numeric)  %>%
   select(starts_with("all_")) %>%
@@ -850,25 +1003,25 @@ third_term_correlation_matrix_remove <- keywords_third_term_sentences %>%
 correlation_matrix_third_term <- keywords_third_term_sentences %>%
   ungroup() %>%
   select(third_term_correlation_matrix_remove$names) %>%
-  mutate_all( ~ ifelse(is.na(.), 0, .))
+  mutate_all(~ ifelse(is.na(.), 0, .))
 
-correlation_third_term <-  map(names(correlation_matrix_third_term), ~ {
-  test_result <-
-    cor.test(
-      keywords_third_term_sentences$string_length,
-    correlation_matrix_third_term[[.x]],
-      method = "pearson"
+correlation_third_term <-
+  map(names(correlation_matrix_third_term), ~ {
+    test_result <-
+      cor.test(
+        keywords_third_term_sentences$string_length,
+        correlation_matrix_third_term[[.x]],
+        method = "pearson"
+      )
+    tibble(
+      keyword = .x,
+      cor_coefficient = round(test_result$estimate, 4),
+      p_value = test_result$p.value,
     )
-  tibble(
-    keyword = .x,
-    cor_coefficient = round(test_result$estimate, 4),
-    p_value = test_result$p.value,
-  )
-}) %>% bind_rows() %>%
-  unnest_wider(cor_coefficient) %>% 
-  mutate(presentmentioned="third_term", .before=1) %>% 
+  }) %>% bind_rows() %>%
+  unnest_wider(cor_coefficient) %>%
+  mutate(presentmentioned = "third_term", .before = 1) %>%
   # filter(column!="string_length") %>%
   filter(p_value < .5) %>%
   filter(cor > .2 | cor < -.2)
 ```
-
