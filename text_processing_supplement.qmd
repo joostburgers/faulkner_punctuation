@@ -4,12 +4,10 @@ format: html
 editor: visual
 ---
 
-
 ```{r}
 # knitr::opts_chunk$set(cache = TRUE, warning = FALSE, 
 #                       message = FALSE, cache.lazy = FALSE)
 ```
-
 
 # Introduction
 
@@ -113,7 +111,6 @@ write_csv(all_works_tidy_string,"temporary_text/all_works_tidy_string.csv")
 all_works_tidy_string_import <- read_csv("temporary_text/all_works_tidy_string.csv")
 ```
 
-
 ## Create Database
 
 Import the database files
@@ -174,8 +171,6 @@ events_clean <- events %>%
 
 ```
 
-
-
 ```{r full_database}
 #| eval: false
 #| include: false
@@ -193,8 +188,6 @@ database_full <- events_clean %>%
 write_csv(database_full, "processed_data/dy_database_flattened_2024_1_21.csv")
 
 ```
-
-
 
 The event data has been grabbed from the latest database extraction. As the delimiting of event data has been stable for some time, there is no need to update this. The only thing that changes from year to year is the number of keywords entered by event.
 
@@ -214,6 +207,9 @@ The event data needs to be modified to create a begin and end column. As this da
 
 ```{r dy_events_data_short}
 #Clean up the event data and build begin and end word vectors
+
+#| eval: false
+#| include: false
 
 dy_events_data_short <- dy_events_data %>%
   select(sourcetexttitle,
@@ -251,6 +247,9 @@ dy_events_data_short <- dy_events_data %>%
 The cleaned up texts are joined to the event data. This sets them up to be matched.
 
 ```{r dy_texts_events}
+#| eval: false
+#| include: false
+
 dy_texts_events <-  all_works_tidy_string_import %>% 
                     left_join(dy_events_data_short, by="code") 
 ```
@@ -260,6 +259,9 @@ dy_texts_events <-  all_works_tidy_string_import %>%
 The code below searches for the location of the start of the event in the full text and returns the index. Because the last event of any text is always `NA` because there is no more text, the value is set to the last index value of the full text.
 
 ```{r dy_text_event_indexed}
+#| eval: false
+#| include: false
+
 dy_text_event_indexed <- dy_texts_events %>%
   mutate(begin_index = str_locate(cleaned, begin_word_cleaned)[, 1]) %>%
   mutate(end_index = str_locate(cleaned, end_word_cleaned)[, 1]) %>%
@@ -269,7 +271,8 @@ dy_text_event_indexed <- dy_texts_events %>%
 
 ```{r dy_text_event_indexed_NA}
 #This helper function checks for any sentences that cannot be matched. There should be 0 observations, meaning that everything matched.
-
+#| eval: false
+#| include: false
 dy_text_event_indexed_NA <- dy_text_event_indexed %>%
   filter(is.na(begin_index)) %>%
   select(begin_word, begin_word_cleaned, orderwithinpage)
@@ -296,6 +299,9 @@ This code sequences uses some shortcuts to arrive at the begin and end index of 
 Once the sentences are established, these are unnested rowwise to create a very long table of a character per row. By setting the character index to `row_number()`, it is possible to keep track of the position of a character. Using `distinct()` grabs the first instance of each sentence, and therefore the beginning index. The end index is obviously the beginning index of the next sentence -1. With the indexes in place, the number of words in the string are counted.
 
 ```{r all_works_sentence_index}
+#| eval: false
+#| include: false
+
 all_works_sentence_index <- all_works_tidy_string_import %>%
   group_by(code, date) %>%
   rowwise() %>%
@@ -341,7 +347,8 @@ The full text and cleaned text can be dropped from the `dy_text_event_sentences`
 
 ```{r}
 #these are errors in the way it is fetching events. 
-
+#| eval: false
+#| include: false
 check_events <- dy_text_event_indexed %>% 
                 filter(begin_index>end_index)
 ```
@@ -351,6 +358,8 @@ check_events <- dy_text_event_indexed %>%
 The following join and filter finds which sentences appear in which events. This is generally the preferable way to think about it, because sentences tend to be shorter than events.
 
 ```{r sentences_in_events}
+#| eval: false
+#| include: false
 sentences_in_events <- all_works_sentence_index %>%
   inner_join(dy_text_event_indexed, by = NULL, copy = TRUE) %>%
   filter(begin_sentence_index >= begin_index, end_sentence_index <= end_index) %>% 
@@ -360,6 +369,8 @@ sentences_in_events <- all_works_sentence_index %>%
 The opposite relationship is also true, though less frequently. Some long sentences encompassing quite a number of events. The script below accounts for this contingency.
 
 ```{r events_in_sentences}
+#| eval: false
+#| include: false
 events_in_sentences <- all_works_sentence_index %>%
   inner_join(dy_text_event_indexed, by = NULL, copy = TRUE) %>% 
   filter(begin_index>=begin_sentence_index, end_index<=end_sentence_index) %>% 
@@ -371,7 +382,8 @@ events_in_sentences <- all_works_sentence_index %>%
 We can then make these two figures one giant table.
 
 ```{r all_events_sentences}
-
+#| eval: false
+#| include: false
 all_events_sentences <- sentences_in_events %>% 
                         bind_rows(events_in_sentences) %>% 
                         select(!c(begin_word, end_word))
@@ -382,6 +394,10 @@ all_events_sentences <- sentences_in_events %>%
 write_csv(all_events_sentences,"temporary_text/all_events_sentences.csv")
 ```
 
+
+```{r}
+all_events_sentences <- read_csv("temporary_text/all_events_sentences.csv")
+```
 
 
 ## Import demographic
@@ -405,7 +421,7 @@ short_demographic <- dy_events_data %>%
     ) %>%
   mutate(class = ifelse(class=="Indian Chief", "Indian Tribal Leader", class)) %>% 
   filter(race != "Asian") %>% 
-  # filter(presentmentioned == "Mentioned") %>%
+  
   filter(individualgroup=="Individual") %>% 
   filter(str_detect(gender,"Group",negate= TRUE))
 ```
@@ -428,6 +444,17 @@ raceclassgender_demographic <- short_demographic %>%
   ungroup()
 ```
 
+```{r}
+raceclassgender_demographic_correlation <- raceclassgender_demographic %>% 
+                                            pivot_wider(names_from = presentmentioned, values_from=starts_with("all_") ) %>% 
+  select(starts_with("all_")) %>% 
+    mutate_all(~replace_na(., 0))
+  
+  matrix <- cor(raceclassgender_demographic_correlation) 
+
+```
+
+
 Join the demographics with the events and the sentences and multiply each demographic unit by string length. Simply stated, if there are no white male characters in an event this will not add to their string lenght. Alternatively, if a type of character is present that string length is added. Thus, the result is a vector of all of the strings that each type of character occurred in and how long these strings are. Each distinct sentence should be kept to prevent double counting.
 
 ```{r sentence_demographics}
@@ -439,26 +466,25 @@ sentence_demographics_raw <- all_events_sentences %>%
 
 ```
 
-```{r}
-sentence_demographics_present <- sentence_demographics_raw %>% 
-                                    filter(presentmentioned=="Present") %>% 
+```{r sentence_demographics_present}
+sentence_demographics_present <- sentence_demographics_raw %>%
+  filter(presentmentioned == "Present") %>%
   distinct(sentences, .keep_all = TRUE)
 ```
 
-```{r}
-sentence_demographics_mentioned <- sentence_demographics_raw %>% 
-                                   filter(presentmentioned=="Mentioned") %>% distinct(sentences, .keep_all = TRUE)
+```{r sentence_demographics_mentioned}
+sentence_demographics_mentioned <- sentence_demographics_raw %>%
+  filter(presentmentioned == "Mentioned") %>% 
+  distinct(sentences, .keep_all = TRUE)
 
 ```
 
-```{r}
+```{r sentence_demographics_both}
 sentence_demographics_both <- all_events_sentences %>%
   left_join(raceclassgender_demographic, by = "nid") %>%
   mutate(across(starts_with("all"), ~ . * string_length)) %>% 
   distinct(sentences, .keep_all = TRUE)
 ```
-
-
 
 ```{r correlation_present}
 
@@ -502,8 +528,7 @@ correlation_present <-  map(names(correlation_matrix_present), ~ {
 
 ```
 
-
-```{r correlation_by_work}
+```{r correlation_by_work_present}
 
 
 correlation_work_present_remove <- sentence_demographics_present %>%
@@ -547,8 +572,6 @@ correlation_work_present_result <- correlation_work_present %>%
 
 
 ```
-
-
 
 ```{r correlation_mentioned}
 mentioned_correlation_matrix_remove <- sentence_demographics_mentioned %>%
@@ -630,8 +653,6 @@ correlation_work_mentioned_result <- correlation_work_mentioned %>%
 
 ```
 
-
-
 ```{r}
 both_correlation_matrix_remove <- sentence_demographics_both %>%
   ungroup() %>%
@@ -672,7 +693,7 @@ correlation_both <-
   filter(cor > .2 | cor < -.2)
 ```
 
-```{r}
+```{r correlation_work_both}
 
 correlation_work_both_remove <- sentence_demographics_both %>%
   select_if(is.numeric) %>%
@@ -712,8 +733,6 @@ correlation_work_both_result <- correlation_work_both %>%
 
 ```
 
-
-
 ```{r all_correlation}
 all_correlation <- correlation_present %>% 
                     bind_rows(correlation_mentioned) %>% 
@@ -721,9 +740,21 @@ all_correlation <- correlation_present %>%
 ```
 
 
+```{r}
+all_work_correlation <- correlation_work_both_result %>% 
+                        bind_rows(correlation_work_mentioned_result) %>% 
+                        bind_rows(correlation_work_present_result) %>% 
+                        group_by(presentmentioned) %>% 
+                        distinct(name,n) %>% 
+                        ungroup() %>% 
+                        pivot_wider(id_cols = name, names_from = presentmentioned, values_from = n) %>% 
+                        filter(Mentioned>Present)
+```
+
+
 Calculate the mean, median, max, and sum of each character type.
 
-```{r}
+```{r average_sentence_length_type}
 average_sentence_length <- sentence_demographics_both %>%
   ungroup() %>%
   filter(code != "RQ") %>%
@@ -774,13 +805,13 @@ names_length_raw <- all_events_sentences %>%
   mutate(across(starts_with("all"), ~ . * string_length)) 
 ```
 
-```{r}
+```{r names_length_present}
 names_length_present <- names_length_raw %>%
   filter(presentmentioned == "Present") %>%
   distinct(sentences, .keep_all = TRUE)
 ```
 
-```{r}
+```{r names_length_present_matrix}
 names_present_correlation_matrix_remove <- names_length_present %>%
   ungroup() %>%
   select_if(is.numeric)  %>%
@@ -818,13 +849,13 @@ correlation_names_present <-  map(names(correlation_matrix_names_present), ~ {
   filter(cor > .2 | cor < -.2)
 ```
 
-```{r}
+```{r names_length_mentioned}
 names_length_mentioned <- names_length_raw %>%
   filter(presentmentioned == "Mentioned") %>%
   distinct(sentences, .keep_all = TRUE)
 ```
 
-```{r}
+```{r correlation_names_mentioned}
 names_mentioned_correlation_matrix_remove <-
   names_length_mentioned %>%
   ungroup() %>%
@@ -864,12 +895,12 @@ correlation_names_mentioned <-
   filter(cor > .2 | cor < -.2)
 ```
 
-```{r}
+```{r names_length_both}
 names_length_both <- names_length_raw %>%
   distinct(sentences, .keep_all = TRUE)
 ```
 
-```{r}
+```{r correlation_names_both}
 names_both_correlation_matrix_remove <- names_length_both %>%
   ungroup() %>%
   select_if(is.numeric)  %>%
@@ -906,10 +937,121 @@ correlation_names_both <-
   filter(cor > .2 | cor < -.2)
 ```
 
-```{r}
+```{r all_names_correlation}
 all_names_correlation <- correlation_names_present %>%
-  bind_rows(correlation_names_mentioned) %>%     bind_rows(correlation_names_both)
+  bind_rows(correlation_names_mentioned) %>%     
+  bind_rows(correlation_names_both)
 ```
+
+```{r}
+#| eval: false
+#| include: false
+correlation_names_work_remove <- names_length_present %>%
+  select_if(is.numeric) %>%
+  select(starts_with("all_")) %>%
+  pivot_longer(starts_with("all_"),
+               names_to = "character_type",
+               values_to = "count") %>%
+  drop_na(count) %>%
+  group_by(character_type) %>%
+  summarise(count = n()) %>%
+  filter(count > 1) %>%
+  pull(character_type)
+
+correlation_names_work_present <- names_length_present %>%
+  select(code, string_length, all_of(correlation_names_work_remove)) %>%
+  group_by(code) %>%
+  replace(is.na(.), 0) %>% 
+ summarise(across(starts_with("all_"), 
+                   list(cor_coefficient = ~ cor(string_length, ., use = "complete.obs"),
+                        p_value = ~ cor.test(string_length, ., use = "complete.obs")$p.value),
+                   .names = "{.col}_{.fn}"))
+
+correlation_names_work_present_result <- correlation_names_work %>%
+  pivot_longer(cols = starts_with("all_"),
+               names_to = "name") %>% 
+                drop_na() %>% 
+               mutate(correlation_cof= ifelse(str_detect(name, "_cor"),value,NA)) %>% 
+                mutate(p_value=ifelse(str_detect(name, "_p"),value,NA)) %>%                  mutate(name=str_remove_all(name,"_cor_coefficient")) %>% 
+  mutate(name=str_remove_all(name,"_p_value")) %>% 
+  mutate(name=str_remove_all(name, "all_")) %>% 
+  mutate(p_value=ifelse(name==lead(name), lead(value),NA)) %>% 
+  drop_na() %>% 
+  filter(p_value<.05) %>% 
+    filter(correlation_cof>.5 | correlation_cof< -.5) %>% 
+  add_count(name) %>% 
+  mutate(presentmentioned="Present")
+```
+
+```{r}
+write_csv(correlation_names_work_present_result, "temporary_text/correlation_names_work_present_result.csv")
+```
+
+
+
+```{r}
+#| eval: false
+#| include: false
+correlation_names_work_mentioned_remove <- names_length_mentioned %>%
+  select_if(is.numeric) %>%
+  select(starts_with("all_")) %>%
+  pivot_longer(starts_with("all_"),
+               names_to = "character_type",
+               values_to = "count") %>%
+  drop_na(count) %>%
+  group_by(character_type) %>%
+  summarise(count = n()) %>%
+  filter(count > 1) %>%
+  pull(character_type)
+
+correlation_names_work_mentioned <- names_length_mentioned %>%
+  select(code, string_length, all_of(correlation_names_work_mentioned_remove)) %>%
+  group_by(code) %>%
+  replace(is.na(.), 0) %>% 
+ summarise(across(starts_with("all_"), 
+                   list(cor_coefficient = ~ cor(string_length, ., use = "complete.obs"),
+                        p_value = ~ cor.test(string_length, ., use = "complete.obs")$p.value),
+                   .names = "{.col}_{.fn}"))
+
+correlation_names_work_mentioned_result <- correlation_names_work_mentioned %>%
+  pivot_longer(cols = starts_with("all_"),
+               names_to = "name") %>% 
+                drop_na() %>% 
+               mutate(correlation_cof= ifelse(str_detect(name, "_cor"),value,NA)) %>% 
+                mutate(p_value=ifelse(str_detect(name, "_p"),value,NA)) %>%                  mutate(name=str_remove_all(name,"_cor_coefficient")) %>% 
+  mutate(name=str_remove_all(name,"_p_value")) %>% 
+  mutate(name=str_remove_all(name, "all_")) %>% 
+  mutate(p_value=ifelse(name==lead(name), lead(value),NA)) %>% 
+  drop_na() %>% 
+  filter(p_value<.05) %>% 
+    filter(correlation_cof>.5 | correlation_cof< -.5) %>% 
+  add_count(name) %>% 
+  mutate(presentmentioned="Mentioned")
+```
+
+
+```{r}
+write_csv(correlation_names_work_mentioned_result,"temporary_text/correlation_names_work_mentioned_result.csv")
+```
+
+
+```{r}
+#| eval: false
+#| include: false
+all_work_names_correlation <- correlation_names_work_present_result %>% 
+                              bind_rows(correlation_names_work_mentioned_result) %>% 
+ group_by(presentmentioned) %>% 
+                        distinct(name,n) %>% 
+                        ungroup() %>% 
+                        pivot_wider(id_cols = name, names_from = presentmentioned, values_from = n) %>% 
+                        filter(Mentioned>Present)
+
+```
+
+```{r}
+write_csv(all_work_names_correlation,"temporary_text/all_work_names_correlation.csv")
+```
+
 
 ```{r}
 character_sentence_length <- names_length_both %>%
