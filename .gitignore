@@ -37,5 +37,5 @@ research_articles
 unprocessed_data
 .RDataTmp1
 .RDataTmp2
-temporary_text
-all_events_sentences.csv
+
+.RDataTmp3
