@@ -9,6 +9,8 @@ format: html
 Load in packages
 
 ```{r packages}
+#| warning: false
+
 library(tidyverse)
 library(tidytext)
 library(qdapRegex )
@@ -68,6 +70,14 @@ all_works_tidy_string_original <- all_works_original %>%
   mutate(type = ifelse(work_length > 40000, "novel", "short_story")) %>%
   mutate(cleaned = str_to_lower(text)) 
   
+```
+
+
+```{r}
+revised_works_percent <- all_works_tidy_string_original %>% 
+                        group_by(revised) %>% 
+                          summarise(work_length=sum(work_length)) %>% 
+                          mutate(percent= work_length/(sum(work_length)))
 ```
 
 
@@ -134,7 +144,7 @@ write_csv(corpus_percent_all,"processed_data/corpus_percent_all.csv")
 all_works_punctuation <- 
   all_works_original_import %>%
   ungroup() %>% 
-  group_by(title, date, code, type) %>%
+  group_by(title, date, code, type, revised) %>%
   unnest_regex(sentence, cleaned, "[.?!]") %>% 
 mutate(sentence = str_replace(sentence,"”(?=\\s{1})","")) %>% 
   mutate (string_length = str_count(sentence, "\\S+")) %>%
@@ -151,6 +161,35 @@ mutate(sentence = str_replace(sentence,"”(?=\\s{1})","")) %>%
   
   
 ```
+
+```{r total_duplicate_text}
+
+# These calculations were used to get a sense of how much duplicated text there is between GDM and the stories and likewise Unvanquished and the stories. This is not a whole lot.
+
+all_works_punctuation_duplicate <- all_works_punctuation %>% 
+                                    ungroup()  %>% 
+                                      count(sentence) %>% 
+                                      filter(n>1)
+
+all_works_unique_removed <- all_works_punctuation %>% 
+                            right_join(all_works_punctuation_duplicate) %>% 
+                            group_by(title) %>% 
+                            distinct(sentence, .keep_all = TRUE)
+                                
+duplicate_sentences <- all_works_unique_removed %>% 
+                        arrange(desc(string_length), sentence) %>% 
+                        filter(string_length>6) %>% 
+                        ungroup() %>% 
+                        distinct(sentence,string_length) %>% 
+                        summarise(total_duplicates= sum(string_length)) 
+
+percent_duplicate <- duplicate_sentences %>% 
+                      mutate(duplicate_percent = total_duplicates/sum(revised_works_percent$work_length))
+                      
+
+```
+
+
 
 ```{r all_works_punctuation}
 write_csv(all_works_punctuation,"processed_data/all_works_punctuation.csv")
