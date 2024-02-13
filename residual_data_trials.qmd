@@ -1,0 +1,222 @@
+---
+title: "residual_data_trials"
+format: html
+---
+
+# Introduction
+
+These data trials were run to check certain assumptions about the text. They have no value other than demonstrating data that ended up being irrelevant. 
+
+
+```{r import_demogrpahics}
+#demographic data goes here. Read in file then come up with a measure of class. % upper class men present.
+
+demographic <- read_csv("processed_data/dy_database_flattened_2024_1_21.csv", show_col_types = FALSE)
+```
+
+```{r short_demographic}
+# create a demographic chart of all relevant variables.
+
+short_demographic <- demographic %>%
+  select(
+    SourceTextTitle,
+    SourceTextCode,
+    PageNumber,
+    Nid,
+    PresentMentioned,
+    Race,
+    Gender,
+    Class,
+    Rank,
+    IndividualGroup
+    ) %>%
+  filter(PresentMentioned == "Present") %>% 
+  filter(IndividualGroup=="Individual") %>% 
+  filter(str_detect(Gender,"Group",negate= TRUE))
+
+                      
+```
+
+```{r race_demographic}
+#create tibble of each race in each event.
+
+race_demographic <- short_demographic %>%
+  group_by(SourceTextCode, Nid) %>%
+  pivot_wider(
+    id_cols = c(SourceTextCode, PageNumber, Nid),
+    names_from = Race,
+    values_from = Gender,
+    values_fn = list(Gender = length),
+    names_prefix = "race_"
+  )  
+          
+```
+
+```{r percent_race_per_work}
+#Percent white people per work
+
+race_demographic_summary <- race_demographic %>%
+  group_by(SourceTextCode) %>%
+  summarise(across(starts_with("race_"), ~ sum(.x, na.rm = TRUE))) %>%
+  group_by(SourceTextCode) %>%
+  mutate(total = sum(c_across(starts_with("race_")), na.rm = TRUE)) %>%
+  mutate(white_percent = race_White / total)
+```
+
+```{r class_demographic}
+#Character count by class in each event
+
+class_demographic <- short_demographic %>%
+  group_by(SourceTextCode, Nid) %>%
+  pivot_wider(
+    id_cols = c(SourceTextCode, PageNumber, Nid),
+    names_from = Class,
+    values_from = Gender,
+    values_fn = list(Gender = length),
+    names_prefix = "class_"
+  ) %>%
+  rename_with( ~ tolower(gsub(" ", "_", .x, fixed = TRUE)))
+```
+
+```{r class_by_text}
+#Percent upper class characters in a text
+class_demographic_summary <- class_demographic %>%
+  group_by(sourcetextcode) %>%
+  summarise(across(starts_with("class_"), ~ sum(.x, na.rm = TRUE))) %>%
+  group_by(sourcetextcode) %>%
+  mutate(total = sum(c_across(starts_with("class_")), na.rm = TRUE)) %>%
+  mutate(upper_percent = class_upper_class/total)
+```
+
+```{r gender_by_text}
+#Each character in an event by gender
+
+gender_demographic <- short_demographic %>%
+  group_by(SourceTextCode, Nid) %>%
+  pivot_wider(
+    id_cols = c(SourceTextCode, PageNumber, Nid),
+    names_from = Gender,
+    values_from = Class,
+    values_fn = list(Class = length),
+    names_prefix = "gender_"
+  ) %>%
+  rename_with( ~ tolower(gsub(" ", "_", .x, fixed = TRUE)))
+
+```
+
+```{r gender_demographic_summary}
+#Percent men per text
+
+gender_demographic_summary <- gender_demographic %>%
+  group_by(sourcetextcode) %>%
+  summarise(across(starts_with("gender_"), ~ sum(.x, na.rm = TRUE))) %>%
+  group_by(sourcetextcode) %>%
+  mutate(total = sum(c_across(starts_with("gender_")), na.rm = TRUE)) %>%
+  mutate(male_percent = gender_male / total)
+```
+
+```{r}
+#| include: false
+
+#Join various demographic tables with punctuation tables
+
+demographics_punctuation <- summary_punctuation %>%
+  inner_join(
+    select(race_demographic_summary, SourceTextCode, white_percent),
+    by = join_by(code == SourceTextCode)
+  ) %>%
+  inner_join(
+    select(class_demographic_summary, sourcetextcode, upper_percent),
+    by = join_by(code == sourcetextcode)
+  ) %>%
+  inner_join(
+    select(gender_demographic_summary, sourcetextcode, male_percent),
+    by = join_by(code == sourcetextcode)
+  )
+```
+
+```{r correlations}
+#First trials at correlation. Did not yield interesting results
+
+# 
+# correlations_string_length_all <- demographics_punctuation %>%
+#   ungroup() %>%
+#   summarise(across(where((is.numeric)),  ~ cor(.x, string_length, method =
+#                                                  "pearson")))
+# 
+
+```
+
+```{r correlations_novel}
+# correlations_string_length_novel <- demographics_punctuation %>%
+#   filter(type=="novel") %>% 
+#   ungroup() %>%
+#   summarise(across(where((is.numeric)),  ~ cor(.x, string_length, method =
+#                                              "pearson")))
+#No significant correlations
+
+```
+
+```{r correlations_short_story}
+# correlations_string_length_short_story <- demographics_punctuation %>%
+#   filter(type=="short_story") %>% 
+#   ungroup() %>%
+#   summarise(across(where((is.numeric)),  ~ cor(.x, string_length, method =
+#                                              "pearson")))
+#No significant correlations
+
+```
+
+
+
+```{r racegender_demographic}
+# This looks purely at race and gender, but does not yield interesting results
+
+racegender_demographic <- short_demographic %>%
+  mutate(racegender = paste(Race, Gender, sep ="_")) %>%
+  mutate(racegender = tolower(str_replace_all(racegender, " ", "_"))) %>%
+  group_by(SourceTextCode, Nid) %>%
+  pivot_wider(
+    id_cols = c(SourceTextCode, PageNumber, Nid),
+    names_from = racegender,
+    values_from = Gender,
+    values_fn = list(Gender = length),
+    names_prefix = "all_"
+  ) %>%
+  rename_with( ~ tolower(gsub(" ", "_", .x, fixed = TRUE))) %>%
+  ungroup()
+```
+
+```{r racegender_demographic_summary}
+#Breakdown of each text by race and gender. This does not yield interesting results. Not fine grained enough
+
+racegender_demographic_summary <-
+  racegender_demographic %>%
+  group_by(sourcetextcode) %>%
+  summarise(across(starts_with("all_"), ~ sum(.x, na.rm = TRUE))) %>%
+  group_by(sourcetextcode) %>%
+  mutate(total = sum(c_across(starts_with("all_")), na.rm = TRUE)) %>%
+  mutate(across(where(is.numeric),  ~ . / total, .names = "{.col}_percent")) %>% 
+  select(contains("_percent"))
+```
+
+
+```{r}
+demographics_punctuation %>%
+  ggplot(aes(x = white_percent)) +
+  geom_histogram(aes(y = ..density..),
+                 colour = "black",
+                 fill = "white") +
+  geom_density(alpha = .2, fill = "#FF6666") +
+  ggtitle("Distribution of percentage of white characters")
+```
+
+```{r}
+demographics_punctuation %>%
+  ggplot(aes(x = male_percent)) +
+  geom_histogram(aes(y = ..density..),
+                 colour = "black",
+                 fill = "white") +
+  geom_density(alpha = .2, fill = "#FF6666") +
+  ggtitle("Distribution of Percent Male Characters")
+```
