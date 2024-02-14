@@ -166,6 +166,13 @@ average_aid <- summary_punctuation %>%
   filter(title == "asilaydying") %>%
   pull(string_length)
 
+average_id <- summary_punctuation %>% ungroup() %>%
+  filter(title == "intruder") %>%
+  pull(string_length)
+
+
+
+
 ```
 
 Nevertheless, lengthy sentences are seen as hallmark feature of Faulkner's writing. In part this may be because some of Faulkner's most canonical works feature long sentences, *Go Down, Moses* (`r round(average_gdm,0)`), *Absalom, Absalom* (`r round(average_aa,0)`), "A Rose for Emily" (`r round(average_re,0)`), and "Barn Burning" (`r round(average_bb,0)`) These works are, in a sense, more Faulknerian than a relatively unknown early text like "Elly" (`r round(average_el,0)`). Nevertheless, equally canonical works like "That Evening Sun" (`r round(average_tes,0)`) , *Light in August* (`r round(average_lia,0)`) , and *As I Lay Dying* (`r round(average_aid,0)`) do not, on average, stand out as being particularly verbose relative to the the general corpus of texts written in English during this period. Despite these counter indications, it goes against a firmly established scholarly tradition based on Faulkner's own statements and, indeed, common sense, to argue that lengthy sentences are not Faulkner's particular metier. Instead, to understand why Faulkner's sentences, for lack of a better word, *feel* long it is informative to look at their internal structure.
@@ -200,10 +207,16 @@ The different techniques Faulkner uses to achieve his long sentences show a sust
 
 # The Demographics of Punctuation
 
-```{r import_demogrpahics}
+```{r import_demographics}
 #demographic data goes here. Read in file then come up with a measure of class. % upper class men present.
 
 demographic <- read_csv("processed_data/dy_database_flattened_2024_1_21.csv", show_col_types = FALSE)
+```
+
+```{r import_demographic_makeup}
+
+demographic_composition <- read_csv("processed_data/demographic_composition_2024_2_13.csv", show_col_types = FALSE)
+
 ```
 
 ```{r short_demographic}
@@ -229,9 +242,8 @@ short_demographic <- demographic %>%
                       
 ```
 
-
 ```{r raceclassgender_demographic}
-#create a co-occurrence matrix of each character in each event
+#create a co-occurrence matrix of each character type in each event
 
 raceclassgender_demographic <- short_demographic %>%
   mutate(race_class_gender = paste(Race, Class, Gender, sep = "_")) %>%
@@ -262,17 +274,6 @@ raceclassgender_demographic_summary <-
 
 ```
 
-
-
-
-```{r demographic_summary}
-demographic_summary_total <- demographics_punctuation %>% 
-            ungroup() %>% 
-            summarize_all(mean) %>% 
-            select(white_percent:male_percent)
-          
-```
-
 ```{r}
 demographic_summary_rcg_total <- raceclassgender_demographic_summary %>% 
             ungroup() %>% 
@@ -287,13 +288,6 @@ demographics_punctuation_raceclassgender <- summary_punctuation %>%
   inner_join(raceclassgender_demographic_summary,
              join_by(code == sourcetextcode))
             
-```
-
-```{r}
-# key_demographics <- demographics_punctuation_raceclassgender %>% 
-#                   filter(type=="novel") %>% 
-#                     select(string_length, any_of(correlations_string_length_rcg$types))
-
 ```
 
 ```{r corellation_results_all}
@@ -314,14 +308,15 @@ correlation_results_all <- map(names(correlation_matrix_all), ~ {
       method = "pearson"
     )
   tibble(
-    column = .x,
+    type = .x,
     cor_coefficient = round(test_result$estimate, 3),
     p_value = round(test_result$p.value, 3)
   )
 }) %>% bind_rows() %>%
   unnest_wider(cor_coefficient) %>%
   filter(p_value < .05) %>%
-  filter(cor > .2 | cor < -.2)
+  filter(cor > .2 | cor < -.2) %>% 
+  mutate(type = str_replace_all(type, "all_",""))
 
 ```
 
@@ -369,58 +364,95 @@ correlation_results_short_story <- map(names(correlation_matrix_short_story)[-1]
   filter(str_detect(column, "all_"))
 ```
 
-```{r demographics_punctuation_racegender}
-demographics_punctuation_racegender <- summary_punctuation %>%
-  inner_join(racegender_demographic_summary,
-             join_by(code == sourcetextcode))
+Understand how the long sentence may or may not apply to certain characters requires knowing what type of characters are in what specific texts. Fortunately, the *Digital Yoknapatawpha* project has at least some of this data available. Created with the mission to encode every character, location, and event in Faulkner's Yoknapatawpha fiction, *DY* represents a rich database of every character in every event in every text that takes place in Yoknapatawpha. Started in 2012, the database has been meticulously built by over thirty Faulkner experts through a strict peer-review process that has seen each of the thousands of records receive multiple editorial passes. All data entry for the database was manually performed, which leaves room for human error and a variance in interpretations, but the continuous cycles of peer-review have kept variances to a minimum. The database focuses exclusively on the 14 novels and 54 short stories that takes place in Yoknapatawpha, and excludes roughly `r percent(corpus_percent_all %>% filter(type=="notDY") %>% pull(percent))`% of the Faulkner's writing in novels and short stories. This caveat aside, the database still represents the majority of Faulkner's writing. In *DY* each event is any time a character or group of characters is present or mentioned at a specific location for a limited duration of time. Each character, in turn, is identified by different characteristics, race, class, gender, rank and other important attributes. By calculating what types of characters occur in each event, it is possible to build a demographic frequency model on how often and when characters occur in the corpus.
+
+Based on the demographic frequency model, the world of Yoknapatawpha is heavily skewed towards Whites (`r percent(demographic_composition$white_percent)`) and men (`r  percent(demographic_composition$male_percent)`). The distributions are also heavily left-skewed, meaning that the overwhelming majority of stories feature Whites and men, and in only very few stories do they not represent the majority of characters. Given that Faulkner was himself a White male, this is not entirely surprising. These measures give a rough indication as to the composition of demographics within the corpus. Race, class, and gender can also be linked to one another to get a better sense of the finer distinctions between characters. For example, upper class White males constitute around (`r percent(demographic_summary_rcg_total$all_white_upper_class_male)`) of the characters who appear, whereas for enslaved black women this number is a paltry (`r percent(demographic_summary_rcg_total$all_black_enslaved_black_female)`). Clearly, there is a stark disparity in terms of who gets represented.
+
+Using these two data models, that of all the punctuation, and that of all the characters, it is possible to get an understanding of the relationships between characters and punctuation. As with all such inferential models, the result are very much dependent on the underlying assumptions about the data. Suffice to say that each statistical analysis sheds light on possible relationships, but there is not one single test that provides a tidy answer. Given this, relationships between characters and punctuation can be imagined at three different scales: book, character type, and individual characters. In the first, the total character composition of the book is taken and compared to sentence length, in the second the character types in each event is compared to sentence length, and in the third each individual character is compared to sentence length. As the tests get more granular, there are more data points, and generally, there is a higher confidence that the pattern is not random.
+
+### Texts
+
+These demographic distributions per work can be matched to the punctuation distributions. By combining these data models, it is possible to see if there is a correlation between sentence length and the types of characters that occur. To do this, a Pearson correlation was run between a race, class, gender composite of all the characters.[^7] The magnitude of a Pearson correlation runs from -1 to 1, where a negative correlation indicates an inverse relationship and a positive correlation indicates a direct relationship. Generally, a correlation above .5 is considered moderate and above .6 is considered strong (CITE THIS). There was a moderate positive correlation between sentence length and four types of characters: Enslaved women who have both Black and White ancestry (`r round(correlation_results_all$cor[1],3)`), upper class men who have both Black and White ancestry (`r round(correlation_results_all$cor[4],3)`), Men who have both Black and White ancestry and whose class is indeterminable (`r round(correlation_results_all$cor[3],3)`), and upper class women who have both White and Black ancestry (`r round(correlation_results_all$cor[2],3)`). Needless to say, in Faulkner's highly stratified social world, these characters are anomalous. If short stories are removed from the data set, this trend becomes even more pronounced. Indicating that this is more of a feature of the novels than the corpus as a whole. By and large, this correlation highlights those novels that deal with the transgression of the South's strict race and class boundaries. Indeed, the three novels that prominently feature the disruptive effects of black and white ancestral entanglement all feature longer than average sentences: *Absalom, Absalom* (`r round(average_aa,0)`), *Intruder in the Dust* (`r round(average_id,0)`), and *Go Down, Moses* (`r round(average_gdm,0)`). The only notable exception is *Light in August* (`r round(average_lia,0)`), which has Joe Christmas's racial ambiguity as its main theme, but does not, on the whole complement this stylistically with long sentences as expected. Another confounding feature is that the other set of texts with above average sentence lengths is the Snopes trilogy (*The Hamlet*, *The Town*, *The Mansion*), which is actually notable for being almost entirely devoid of non-White characters (theresa). This discrepancy also underscores the limitations of this analysis. There may be some relationship between race and sentence length, but without knowing anything more about the actual sentences this is at best a tenuous link. After all, just because a text features more non-White characters than other texts does not mean that they are central to the action, or appear in those long sentences.
+
+[^7]: Unless otherwise indicated the threshold for significance was set at $p$\<.05. More plainly, only correlations where there was a less than 5% chance of the pattern being random were included.
+
+```{r import_correlations}
+all_correlations_charactertype <- read_csv("processed_data/all_correlation_charactertype.csv", show_col_types = FALSE)
+
+
+```
+
+```{r individual_correlations}
+
+cor_upper_class_white_male_present <- all_correlations_charactertype %>%                               filter(character_type == "white_upper_class_male" & presentmentioned=="Present") %>% 
+                              pull(cor)
+
+cor_upper_class_white_male_mentioned <- all_correlations_charactertype %>%                               filter(character_type == "white_upper_class_male" & presentmentioned=="Mentioned") %>% 
+                              pull(cor)
+
+cor_upper_class_white_female_mentioned <- all_correlations_charactertype %>%                               filter(character_type == "white_upper_class_female" & presentmentioned=="Mentioned") %>% 
+                              pull(cor)
+
+cor_upper_class_white_female_present <- all_correlations_charactertype %>%                               filter(character_type == "white_upper_class_female" & presentmentioned=="Present") %>% 
+                              pull(cor)
+
+cor_lower_class_white_male_mentioned <- all_correlations_charactertype %>%                               filter(character_type == "white_lower_class_male" & presentmentioned=="Mentioned") %>% 
+                              pull(cor)
+
+cor_lower_class_white_male_present <- all_correlations_charactertype %>%                               filter(character_type == "white_lower_class_male" & presentmentioned=="Present") %>% 
+                              pull(cor)
+
+
+
+```
+
+### Character Types
+
+In the Digital Yoknapatawpha database, the events data table stores the coincidence of characters and locations, where each event represent one action by a single or group of characters in one location. As the definition of an event is semantic and not syntactic, it effectively means that events are not coextensive to sentences. Occasionally, an event can run for several pages capturing multiple sentences or it can be only a few words in the middle of a sentence. A digital version of the text can be delimited by the beginning and ending of events, because the database stores the first 8-10 words of each event. This process is involved, and, on occasion requires, manually aligning the beginning and ending of events. The result is a data table that shows each sentence and each event that falls within that sentence if it is a short event, and, conversely, each sentence that falls within an event for longer events. Consequently, each sentence has attached to it event data that includes what characters are present and mentioned. This gives an approximation of the relationship between characters and sentences. Notably, there is no way of knowing what role each character plays in the event: that data simply does not exist. It could be that a character is simply in the background and is not the main part of the action. The baseline assumption is that a frequent recurrence of a character indicates some salience even if they are not the focus of every event.
+
+Since there are roughly ninety-thousand sentences in the entire corpus ranging from sentences one word to six thousand words long there is a really broad range of sentence types in which characters can appear. A Pearson correlation was used to establish the relationship between a character being present and sentence length. This is a very large sample size, and the $p$-value, the odds that the correlation is random, tends to be quite low. Based on this data, the results are at odds with those of the text-level correlation above. Whereas the presence of characters with multiple ancestries tended to be predictive of sentence length at the level of the work, at the level of the sentence there is a strong correlation between sentence length and whether an upper class White male is present (`r round(cor_upper_class_white_male_present,3)`) or mentioned (`r round(cor_upper_class_white_male_mentioned,3)`). Given upper class White males tend to be the protagonists of these novels. This is not all that shocking. It makes sense that the longest sentences appear when the main character is part of the action. What is quite telling is who is less likely to be present. It is true for both upper class White females and lower class White males that their correlation coeffiecent is higher when they are mentioned (`r round(cor_upper_class_white_female_mentioned,3)` and `r round( cor_lower_class_white_male_mentioned,3)` respectively) than when they are present (`r round(cor_upper_class_white_female_present,3)` and `r round( cor_lower_class_white_male_present,3)` respectively). The difference between these correlations is notable, as in each case the correlation coefficient drops quite a bit. That said, this drop does not mean that White women and lower class White men are being spoken about. Mentioned in the database is a catch-all term for any character who is mentioned in an event but does not actually appear. It could be that the event only references a character. Furthermore, correlation is not causation. If one of these characters is present it does not mean that the sentence length will get shorter, only that they are less likely to be present in longer sentences. All those caveats aside, scenes in Faulkner in which two White men, usually upper class, are discussing a white Woman who is absent, through highly wrought and experimental prose that collapses past, present and future is are not rare. Indeed, Quentin Compson discussing his sister Caddy with his father and Quentin and Shreve imagining Judith Bon, are well-mined critical veins. Likewise, both *The Town* and *The Mansion* feature two upper class White men who recount and critique the actions of the lower class white men in the Hamlet of Frenchman's bend and the town of Jefferson. Thus, while some caution is necessary when interpreting the value of these correlations, they do comport with the social picture of Yoknapatawpha that other critics have also painted. What falls away from this picture is the correlation between sentence length and any troubling of the racial binary of the Jim Crow South. There is only a weak correlation between mixed ancestry characters and sentence length. A plausible explanation for this is that the correlation between sentence length and character type was run across the entire corpus. Since, characters of mixed ancestry do not appear in all texts, their sentence length is effectively 0 for quite a number of rows. Their individual presence in long sentences gets lost in the general mass of writing.
+
+```{r all_work_correlation_import}
+
+all_work_correlation <- read_csv("processed_data/all_work_correlation.csv", show_col_types = FALSE)
+
+```
+
+```{r work_correlations_individual}
+
+correlations_lion <- all_work_correlation %>% 
+                      filter(code=="LIO")
+
 ```
 
 ```{r}
-#Create a matrix with all the relevant correlation values that will be tested against string_length
-
-correlation_matrix_racegender_all <- demographics_punctuation_racegender %>% 
-  ungroup() %>% 
-  select_if(is.numeric) %>% 
-  select(starts_with("all_"))
-
-# Test correlation of string_length with all other variables. The map function iterates over all names in the matrix and runs a pearson correlation test against string_length. The resulting object is unnested and converted to a table. Only values with a p-value less than .05 were kept.
-
-correlation_results_racegender_all <- map(names(correlation_matrix_racegender_all), ~ {
-  test_result <-
-    cor.test(
-      demographics_punctuation_racegender$string_length,
-      correlation_matrix_racegender_all[[.x]],
-      method = "pearson"
-    )
-  tibble(
-    column = .x,
-    cor_coefficient = round(test_result$estimate, 3),
-    p_value = round(test_result$p.value, 3)
-  )
-}) %>% bind_rows() %>%
-  unnest_wider(cor_coefficient) %>%
-  filter(p_value < .05) %>%
-  filter(cor > .2 | cor < -.2)
-
+sentence_demographic_alonegroup <- read_csv("processed_data/sentence_demographic_alonegroup.csv", show_col_types = FALSE)
 ```
 
+```{r}
+lion_alonegroup <- sentence_demographic_alonegroup %>% 
+                    filter(code=="LIO")
+```
 
-Understand how the long sentence may or may not apply to certain characters requires knowing what type of characters are in what specific texts. Fortunately, the *Digital Yoknapatawpha* project has at least some of this data available. Created with the mission to encode every character, location, and event in Faulkner's Yoknapatawpha fiction, *DY* represents a rich database of every character in every event in every text that takes place in Yoknapatawpha. Started in 2012, the database has been meticulously built by over thirty Faulkner experts through a strict peer-review process that has seen each of the thousands of records receive multiple editorial passes. All data entry for the database was manually performed, which leaves room for human error and a variance in interpretations, but the continuous cycles of peer-review have kept variances to a minimum. The database focuses exclusively on the 14 novels and 54 short stories that takes place in Yoknapatawpha, and excludes roughly `r percent(corpus_percent_all %>% filter(type=="notDY") %>% pull(percent))`% of the Faulkner's writing in novels and short stories. This caveat aside, the database still represents the majority of Faulkner's writing. In *DY* each event is any time a character or group of characters is present or mentioned at a specific location for a limited duration of time. Each character, in turn, is identified by different characteristics, race, class, gender, rank and other important attributes. By calculating what types of characters occur in each event, it is possible to build a demographic frequency model on how often and when characters occur in the corpus.
+```{r}
+alone_in_text <- read_csv("processed_data/raceclassgender_alone.csv", show_col_types = FALSE)
+```
 
-Based on the demographic frequency model, the world of Yoknapatawpha is heavily skewed towards Whites (`r round(demographic_summary_total$white_percent,0)`%) and men `r  round(demographic_summary_total$male_percent,0)`. The distributions are also heavily left-skewed, meaning that the overwhelming majority of stories feature Whites and men, and in only very few stories do they not represent the majority of characters. Given that Faulkner was himself a White male, this is not entirely surprising. These measures give a rough indication as to the composition of demographics within the corpus. Race, class, and gender can also be linked to one another to get a better sense of the finer distinctions between characters. For example, upper class White males constitute around `r percent(demographic_summary_rcg_total$all_white_upper_class_male)` of the characters who appear, whereas for enslaved black women this number is a paltry `r percent(demographic_summary_rcg_total$all_black_enslaved_female)`. Clearly, there is a stark disparity in terms of who gets represented.
+```{r}
+alone_in_text_white_male <- alone_in_text %>% 
+                            filter(race_class_gender=="white_upper_class_male") %>% 
+  pull(alone_percent)
+```
 
-Using these two data models, that of all the punctuation, and that of all the characters, it is possible to get an understanding of the relationships between characters and punctuation. As with all such inferential models, the result are very much dependent on the underlying assumptions about the data. Suffice to say that there is not one easy test to run, and that each sheds light on possible relationships, but there is not one single test that provides a tidy answer. Given this, relationships between characters and punctuation can be imagined at three different scales: book, type, and name. In the first, the total character composition of the book is taken and compared to sentence lenght, in the second the character types in each event is compared to sentence length, and in the third each individual character is taken to see if there is a relationship. As the tests get more granular, there are more data points, and generally, there is a higher confidence that the pattern is not random.
+It is possible to tease out this relationship by performing a more fine-grained analysis and looking at character type and sentence length correlations within each work. The pattern that occurs here is quite telling. Essentially, upper class white men are consistently have a moderate to strong correlation with longer sentences, but there are also other character types whose correlation suddenly becomes stronger in relation to sentence length. Thus, in the short story 'Lion' both Upper Class White men and the lone lower class male with Native American and White ancestry, Boon Hogganbeck, strongly correlate with longer sentences (`r round(correlations_lion$value[5],3)`, `r round(correlations_lion$value[4],3)`). However, this is likely due to the fact that Boon happens to appear frequently in scenes with an upper class white male, Quentin Compson. Indeed, the average sentence length when an upper class white male is alone is `r round(lion_alonegroup$alone,0)` words-per-sentence, which drops to `round(lion_alonegroup$alone,0)` when there are other characters present.[^8]
 
-# Books
+[^8]: It is not possible to run a correlation test on only those sentences where a character is alone, because there are too few data points. Generally, though it is true that a character alone, irrespective of race, class, or gender tends to be embedded in longer sentences than in a group. That said, the plurality of events where a character was alone featured upper class white males (`r percent(alone_in_text_white_male)`
 
-These demographic distributions per work can be matched to the punctuation distributions. By combining these data models, it is possible to see if there is a correlation between sentence length and the types of characters that occur. To do this, a Pearson correlation was run between a race, class, gender composite of all the characters. There was a weak positive correlation between sentence length and four types of characters: MixedBlackWhite Enslaved Female, MixedBlackWhite Upper Class Male, MixedBlackWhite indeterminable Male, and MixedBlackWhite Upper Class Female. To a certain extent, sentence length goes up when there are proportionally more characters who do not fall neatly into the South's strict racial categories.
+The final an most fine-grained way to consider sentence length is by individual characters.
 
+One thing to consider with all these charactertypes is that their distribution across the corpus.
 
-Looking at the racial composition of one text is still a crude measure, since it does not locate those characters within a sentence. It could be that there are long sentences in a text, but that the character involved in the action is not one of the kind described above.
-
-## Correlation
-
-Correlation data is a bit confounding. This has largely to do with how you select the sample. For example, we can do a very imprecise correlation and track how often specific types of characters appear in a novel and then see if that has anything to do with the average sentence length. It certainly does and those novels in which mixed race characters appear *Absalom, Absalom* and *Intruder in the Dust* tend to have higher than usual words per sentence. This is interestingly not the case for one of Faulkner's most famous mixed race characters: Joe Christmas in *Light in August*. This is a very crude tool, though. Just because certain types of characters appear in novels that tend to have longer sentences, does not mean that they necessarily appear in those sentences. It could be that they appear often, but they only appear in short, relatively unreflective sentences. To understand what characters appear in what sentences, we can use the Digital Yoknapatawpha database. This database can be used to understand what characters appear in what events. Each event, in turn, has been recorded by page number, order within page, and the first words in the text of the event. The last bit of data can be used to reconstruct the textual boundaries of an event. That is, not every event is one sentence, some are multiple pages, and, conversely some events are only a few words. From this data we can gather which sentences fall within a particular event and, in the case of a long sentence, what events fall within a sentence. This can then be used to establish which characters and types of characters appear in which sentences. Since there are roughly 90 thousand sentences ranging from sentences 1 word long to 6,000 words long there is a really broad range in which characters appear. We would want to know the relationship between the type of character who appears and the sentence length. To establish this we can look at the Pearson correlation between each character type and string length. Since this is a very large sample size, the p-value, the odds that the correlation is random, tends to be quite low. In simpler terms, a low p value states that the correlation is significant. The magnitude of the correlation is a number between -1 and 1. Since there is no such thing as negative sentence length, there is no possibility of an inverse correlation. All values have a positive correlation with sentence length. The magnitudes tend to vary. Generally, with a pearson correlation any value above .5 shows a moderate degree of correlation, while that above .7 shows a strong correlation. Based on this data, the results are somewhat unsurprising: upper class white males tend to be a predictor of sentence length. When they appear sentence length tends to go up. This is true whether they are present in the event or merely mentioned. Given upper class white males tend to be the protagonists of these novels. This is not all that shocking. It makes sense that the longest sentences appear when the main character is part of the action. What is quite telling are the correlations just below upper class white males. Here we see higher correlations for upper class white females and lower class white males who are mentioned. That is, when these characters are spoken about the sentences have a tendency to get longer as opposed to when these characters are present. This effect is quite revealing of the texts. Women and lower class males are meant to be spoken about by upppler class men. They are the relational objects that constitute the protagonist subject. Since we have the correlations for each event we also have the events specific characters appear in. Thus, we can run a correlation on which characters tend to appear in longer sentences. Here again, the top ranking is unsurprising: Quentin Compson. When Quentin appears the sentences get longer. The same is true to a lesser extent when Caddy Compson is present. Importantly, only when Jason Compson is mentioned does sentence length go up. A similar dynamic is at play, albeit very weakly, between Judith, Charles Bon, and Henry Sutpen. Judith has a stronger correlation to sentence length than both men, but only when she is Mentioned.
+They are the relational objects that constitute the protagonist subject. Since we have the correlations for each event we also have the events specific characters appear in. Thus, we can run a correlation on which characters tend to appear in longer sentences. Here again, the top ranking is unsurprising: Quentin Compson. When Quentin appears the sentences get longer. The same is true to a lesser extent when Caddy Compson is present. Importantly, only when Jason Compson is mentioned does sentence length go up. A similar dynamic is at play, albeit very weakly, between Judith, Charles Bon, and Henry Sutpen. Judith has a stronger correlation to sentence length than both men, but only when she is Mentioned.
 
 Finally, a different way to think about correlation is by work. One of the things that doing a correlation across the corpus masks is that not every type of character is present in every type of text. Mixed ancestry characters only appear in 13 of the 68 texts. Of these texts, only four characters would be considered major characters. So do do a correlation across an entire corpus hides these characters in the mass of data. Instead, each text has its own correlation environment. Thus, each character should be correlated with sentence length by text to get a more representative picture. Doing this shifts correlations from being very uncommon to being very ubiquitous. In part this is because major characters tend to correlate with longer sentences. Thus the correlation is a proxy for character centrality. That said, there is an interesting phenomenon in this data. Some characters have a higher correlation rate when they are mentioned versus when they are present. Generally speaking, when an event mentions, a middle class white male, a poor white male, or a lower class white female sentence length goes up more often than when they are present. This again, speaks to the power of upper class white men, who have a positive correlation with sentence length in over half the texts, to speak about others. There is no definite way to know who is doing the actual mentioning, but a correlation between characters present and mentioned reveals that: This makes intuitive sense because throughout the Town and The Mansion Gavin Stevens and Ratliff talk about Flem Snopes. This is actually born out by looking at the correlations by name, where Flem Snopes, even though he is putatively the main character in three novels has a more numerous correlation to sentences where is is mentioned versus those where he is present.
 

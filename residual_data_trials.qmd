@@ -135,6 +135,22 @@ demographics_punctuation <- summary_punctuation %>%
   )
 ```
 
+
+
+```{r demographic_summary}
+demographic_summary_total <- demographics_punctuation %>% 
+            ungroup() %>% 
+            summarize_all(mean) %>% 
+            select(white_percent:male_percent)
+          
+```
+
+```{r demographic_make_up}
+write_csv(demographic_summary_total, "processed_data/demographic_composition_2024_2_13.csv")
+```
+
+
+
 ```{r correlations}
 #First trials at correlation. Did not yield interesting results
 
@@ -219,4 +235,52 @@ demographics_punctuation %>%
                  fill = "white") +
   geom_density(alpha = .2, fill = "#FF6666") +
   ggtitle("Distribution of Percent Male Characters")
+```
+
+## Correlations
+
+The following was a correlation on race and gender. It proved not to be relevant
+
+```{r demographics_punctuation_racegender}
+demographics_punctuation_racegender <- summary_punctuation %>%
+  inner_join(racegender_demographic_summary,
+             join_by(code == sourcetextcode))
+```
+
+```{r}
+#Create a matrix with all the relevant correlation values that will be tested against string_length
+
+correlation_matrix_racegender_all <- demographics_punctuation_racegender %>% 
+  ungroup() %>% 
+  select_if(is.numeric) %>% 
+  select(starts_with("all_"))
+
+# Test correlation of string_length with all other variables. The map function iterates over all names in the matrix and runs a pearson correlation test against string_length. The resulting object is unnested and converted to a table. Only values with a p-value less than .05 were kept.
+
+correlation_results_racegender_all <- map(names(correlation_matrix_racegender_all), ~ {
+  test_result <-
+    cor.test(
+      demographics_punctuation_racegender$string_length,
+      correlation_matrix_racegender_all[[.x]],
+      method = "pearson"
+    )
+  tibble(
+    column = .x,
+    cor_coefficient = round(test_result$estimate, 3),
+    p_value = round(test_result$p.value, 3)
+  )
+}) %>% bind_rows() %>%
+  unnest_wider(cor_coefficient) %>%
+  filter(p_value < .07) %>%
+  filter(cor > .2 | cor < -.2)
+
+```
+
+
+
+```{r}
+# key_demographics <- demographics_punctuation_raceclassgender %>% 
+#                   filter(type=="novel") %>% 
+#                     select(string_length, any_of(correlations_string_length_rcg$types))
+
 ```
