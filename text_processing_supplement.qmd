@@ -1030,6 +1030,12 @@ all_names_correlation <- correlation_names_present %>%
 ```
 
 ```{r}
+write_csv(all_names_correlation, "temporary_text/all_names_correlation.csv")
+```
+
+
+
+```{r}
 #| eval: false
 #| include: false
 correlation_names_work_remove <- names_length_present %>%
@@ -1118,10 +1124,19 @@ write_csv(correlation_names_work_mentioned_result,"temporary_text/correlation_na
 ```
 
 ```{r}
+correlation_names_present_result_import <- read_csv("temporary_text/correlation_names_work_present_result.csv", show_col_types = FALSE) 
+```
+
+```{r}
+correlation_names_mentioned_result_import <- read_csv("temporary_text/correlation_names_work_mentioned_result.csv", show_col_types = FALSE)
+```
+
+
+```{r}
 #| eval: false
 #| include: false
-all_work_names_correlation <- correlation_names_work_present_result %>% 
-                              bind_rows(correlation_names_work_mentioned_result) %>% 
+all_work_names_correlation <- correlation_names_present_result_import %>% 
+                              bind_rows(correlation_names_mentioned_result_import) %>% 
  group_by(presentmentioned) %>% 
                         distinct(name,n) %>% 
                         ungroup() %>% 
