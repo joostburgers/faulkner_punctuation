@@ -177,7 +177,8 @@ events_clean <- events %>%
 
 database_full <- events_clean %>% 
                  left_join(characters_clean) %>% 
-                 left_join(locations_clean)  
+                 left_join(locations_clean) %>% 
+                  select(!Region)
 
 ```
 
@@ -579,8 +580,8 @@ correlation_present <-  map(names(correlation_matrix_present), ~ {
   unnest_wider(cor_coefficient) %>%
   mutate(presentmentioned = "Present", .before = 1) %>%
   # filter(column!="string_length") %>%
-  filter(p_value < .5) %>%
-  filter(cor > .2 | cor < -.2)
+  filter(p_value < .05) %>%
+  filter(cor > .1 | cor < -.1)
 
 ```
 
@@ -665,8 +666,8 @@ correlation_mentioned <-
   unnest_wider(cor_coefficient) %>%
   mutate(presentmentioned = "Mentioned", .before = 1) %>%
   filter(character_type != "string_length") %>%
-  filter(p_value < .5) %>%
-  filter(cor > .2 | cor < -.2)
+  filter(p_value < .05) %>%
+  filter(cor > .1 | cor < -.1)
 ```
 
 ```{r correlation_work_mentioned}
@@ -745,8 +746,8 @@ correlation_both <-
   unnest_wider(cor_coefficient) %>%
   mutate(presentmentioned = "Both", .before = 1) %>%
   filter(character_type != "string_length") %>%
-  filter(p_value < .5) %>%
-  filter(cor > .2 | cor < -.2)
+  filter(p_value < .05) %>%
+  filter(cor > .1 | cor < -.1)
 ```
 
 ```{r correlation_work_both}
@@ -783,7 +784,7 @@ correlation_work_both_result <- correlation_work_both %>%
   mutate(p_value=ifelse(name==lead(name), lead(value),NA)) %>% 
   drop_na() %>% 
   filter(p_value<.05) %>% 
-    filter(correlation_cof>.5 | correlation_cof< -.5) %>% 
+    filter(correlation_cof>.1 | correlation_cof< -.1) %>% 
   add_count(name) %>% 
   mutate(presentmentioned="Both")
 
@@ -799,7 +800,7 @@ all_correlation <- correlation_present %>%
 
 ```{r all_correlation_export}
 
-write_csv(all_correlation, "processed_data/all_correlation_charactertype.csv")
+write_csv(all_correlation, "processed_data/all_correlation_charactertype_expanded.csv")
 
 ```
 
