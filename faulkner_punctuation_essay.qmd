@@ -9,7 +9,7 @@ execute:
   echo: false
   warning: false
 bibliography: faulkner_punctuation.bib
-csl: modified-cup.csl
+csl: modified-cup.cls
 ---
 
 ```{r packages}
