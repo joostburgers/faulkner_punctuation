@@ -8,7 +8,7 @@
     <category citation-format="note"/>
     <category field="generic-base"/>
     <summary>Chicago format with full notes and bibliography</summary>
-    <updated>2024-03-10T21:02:50+00:00</updated>
+    <updated>2024-03-11T09:44:31+00:00</updated>
     <rights license="http://creativecommons.org/licenses/by-sa/3.0/">This work is licensed under a Creative Commons Attribution-ShareAlike 3.0 License</rights>
   </info>
   <locale xml:lang="en">
@@ -120,6 +120,14 @@
         </substitute>
       </names>
       <text macro="recipient-note"/>
+    </group>
+    <group>
+      <choose>
+        <if type="article-journal" match="any">
+          <label prefix=", " variable="locator" form="short"/>
+          <text variable="locator"/>
+        </if>
+      </choose>
     </group>
   </macro>
   <macro name="editor">
@@ -883,11 +891,10 @@
     <choose>
       <if type="article-journal">
         <choose>
-          <if variable="locator page" match="any">
+          <if variable="locator" match="any">
+            <text macro="point-locators"/>
             <choose>
-              <if variable="volume issue" match="any">
-                <text macro="point-locators"/>
-              </if>
+              <if variable="volume issue" match="any"/>
             </choose>
           </if>
         </choose>
@@ -915,17 +922,7 @@
         </choose>
       </if>
       <else-if type="article-journal">
-        <group delimiter=" ">
-          <choose>
-            <if locator="page" match="none">
-              <label variable="locator" form="short" suffix=" "/>
-            </if>
-            <else>
-              <label variable="page" form="short"/>
-              <text variable="locator"/>
-            </else>
-          </choose>
-        </group>
+        <group delimiter=" "/>
       </else-if>
       <else-if type="legal_case"/>
       <else>
@@ -1351,26 +1348,24 @@
                       <group delimiter=", ">
                         <group delimiter=", ">
                           <text macro="contributors-note"/>
-                          <text macro="point-locators-join-with-comma"/>
                           <text macro="title-note"/>
                           <text macro="issue-map-graphic"/>
                         </group>
                         <text macro="description-note"/>
                         <text macro="secondary-contributors-note"/>
                         <text macro="container-contributors-note"/>
-                        <text macro="container-title-note"/>
                       </group>
                       <text macro="locators-note-join-with-space"/>
                     </group>
                     <text macro="locators-note-join-with-comma"/>
-                    <text macro="collection-title"/>
                     <text macro="issue-note-join-with-comma"/>
                   </group>
                   <text macro="issue-note-join-with-space"/>
                 </group>
                 <text macro="locators-newspaper"/>
+                <text macro="point-locators-join-with-comma"/>
               </group>
-              <text macro="point-locators-join-with-colon"/>
+              <text macro="locators-journal-join-with-colon"/>
             </group>
             <text macro="access-note"/>
           </group>
@@ -1421,7 +1416,6 @@
             <text macro="locators-newspaper"/>
           </group>
           <text macro="locators-chapter"/>
-          <text macro="locators-journal-join-with-colon"/>
         </group>
         <text macro="access"/>
       </group>

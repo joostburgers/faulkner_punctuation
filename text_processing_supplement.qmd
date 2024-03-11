@@ -1,13 +1,12 @@
 ---
 title: "Text Processing Supplement"
-format: html
+format:
+  html:
+    theme: cosmo
+    css: styles.css
+    toc: true
 editor: visual
 ---
-
-```{r}
-# knitr::opts_chunk$set(cache = TRUE, warning = FALSE, 
-#                       message = FALSE, cache.lazy = FALSE)
-```
 
 # Introduction
 
@@ -15,7 +14,7 @@ The following supplement provides the script for processing the texts and the ca
 
 # Part 1: Pre-processing
 
-Textual pre-processing implements some common procedures for cleaning up the text including removing abbreviations, standardizing quote marks, and, in general, removing artifacts that skew calculations.
+Textual pre-processing implements some common procedures for cleaning up the text including removing abbreviations, standardizing quote marks, and, in general, removing artefacts that skew calculations.
 
 ### Import libraries
 
@@ -71,8 +70,7 @@ For this analysis several texts were excluded: *Requiem for a Nun*, the appendix
 #| eval: false
 #| include: false
 all_works_refined_filtered <- all_works_refined %>%
-  filter(code != "R") %>%
-  filter(code != "RQ")
+  filter(code != "R") 
 ```
 
 ## Tidy Texts
@@ -396,7 +394,7 @@ write_csv(all_events_sentences,"temporary_text/all_events_sentences.csv")
 ```
 
 ```{r}
-all_events_sentences <- read_csv("temporary_text/all_events_sentences.csv")
+all_events_sentences <- read_csv("temporary_text/all_events_sentences.csv", show_col_types = FALSE)
 ```
 
 ## Import demographic
@@ -501,6 +499,7 @@ sentence_demographics_present_alone <- sentence_demographics_present %>% pivot_l
                                                 
 
 ```
+
 ```{r}
 sentence_demographics_present_group <- sentence_demographics_present %>% pivot_longer(starts_with("all")) %>% 
   drop_na(value) %>% 
@@ -508,6 +507,7 @@ sentence_demographics_present_group <- sentence_demographics_present %>% pivot_l
   summarise(mean_string_length = mean(value)) %>% 
   mutate(alone_group = "group")
 ```
+
 ```{r}
 sentence_demographic_alonegroup <- sentence_demographics_present_alone %>% bind_rows(sentence_demographics_present_group) %>% 
   group_by(code,name) %>% 
@@ -519,15 +519,12 @@ sentence_demographic_alonegroup <- sentence_demographics_present_alone %>% bind_
 write_csv(sentence_demographic_alonegroup, "processed_data/sentence_demographic_alonegroup.csv")
 ```
 
-
-
 ```{r}
 alone_group_summary <-  sentence_demographic_alonegroup %>% 
                         ungroup() %>% 
                         group_by(name) %>% 
                         summarise(mean_alone = mean(alone), mean_group = mean(group))
 ```
-
 
 ```{r sentence_demographics_mentioned}
 sentence_demographics_mentioned <- sentence_demographics_raw %>%
@@ -804,8 +801,6 @@ write_csv(all_correlation, "processed_data/all_correlation_charactertype_expande
 
 ```
 
-
-
 ```{r all_work_correlation}
 all_work_correlation <- correlation_work_both_result %>% 
                         bind_rows(correlation_work_mentioned_result)%>%                         bind_rows(correlation_work_present_result) 
@@ -816,7 +811,6 @@ all_work_correlation <- correlation_work_both_result %>%
 write_csv(all_work_correlation,"processed_data/all_work_correlation.csv")
 
 ```
-
 
 ```{r all_work_correlation_count}
 all_work_correlation_count <- all_work_correlation %>%
@@ -831,11 +825,9 @@ all_work_correlation_count <- all_work_correlation %>%
 
 ```
 
-```{r all_work_correlation_export}
+```{r all_work_correlation_export_two}
 write_csv(all_work_correlation_count, "processed_data/all_work_correlation_count.csv")
 ```
-
-
 
 Calculate the mean, median, max, and sum of each character type.
 
@@ -1034,8 +1026,6 @@ all_names_correlation <- correlation_names_present %>%
 write_csv(all_names_correlation, "temporary_text/all_names_correlation.csv")
 ```
 
-
-
 ```{r}
 #| eval: false
 #| include: false
@@ -1131,7 +1121,6 @@ correlation_names_present_result_import <- read_csv("temporary_text/correlation_
 ```{r}
 correlation_names_mentioned_result_import <- read_csv("temporary_text/correlation_names_work_mentioned_result.csv", show_col_types = FALSE)
 ```
-
 
 ```{r}
 #| eval: false
@@ -1244,8 +1233,6 @@ count_keyword_works <- keywords %>%
                 group_by(sourcetextcode) %>% 
                 count(keywords, second_term, third_term)
 ```
-
-
 
 ```{r}
 keywords_second_term_sentences <- all_events_sentences %>%

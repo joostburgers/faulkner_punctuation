@@ -152,7 +152,7 @@ mutate(sentence = str_replace(sentence,"”(?=\\s{1})","")) %>%
   mutate(ellipse = str_count(sentence, "punctellipse")) %>% 
  mutate(comma = str_count(sentence, "\\,")) %>%
   mutate(semi_colon = str_count(sentence, "\\;")) %>%
-  mutate(dash = str_count(sentence, "[\u2013\u2014]")) %>%
+  mutate(dash = str_count(sentence, "-")) %>%
   mutate(colon = str_count(sentence, "\\:")) %>%
   mutate(parenthesis = str_count(sentence, "[\\(\\)]")) 
   
