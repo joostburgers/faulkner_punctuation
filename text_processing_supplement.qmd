@@ -1,5 +1,5 @@
 ---
-title: "Text Processing Supplement"
+title: "Text Processing Supplement: Correlations"
 format:
   html:
     theme: cosmo
@@ -34,8 +34,8 @@ library(rmdformats)
 *Note*: Due to copyright the full text of all texts have been left out of the repository. The texts used were OCR scans and other digital versions. On occasion, scan artifacts and other textual corruptions required editing to match the sentences in the Digital Yoknapatawpha database. This had no effect on the actual word count-per-event.
 
 ```{r import_refined_text_files}
-#| eval: false
-#| include: false
+# | eval: false
+# | include: false
 # List all files with .txt extension in the "refined_text_data" directory
 all_works_refined <- list.files(file.path("refined_text_data"),
                                 full.names = TRUE,
@@ -471,6 +471,8 @@ raceclassgender_demographic_correlation <- raceclassgender_demographic %>%
 
 Join the demographics with the events and the sentences and multiply each demographic unit by string length. Simply stated, if there are no white male characters in an event this will not add to their string lenght. Alternatively, if a type of character is present that string length is added. Thus, the result is a vector of all of the strings that each type of character occurred in and how long these strings are. Each distinct sentence should be kept to prevent double counting.
 
+
+
 ```{r sentence_demographics}
 sentence_demographics_raw <- all_events_sentences %>%
   left_join(raceclassgender_demographic, by = "nid") %>%
@@ -877,10 +879,32 @@ rename_with(~ make.unique(tolower(gsub(" ", "_", .x, fixed = TRUE))), .cols = ev
 ```
 
 ```{r}
+top_percent <- sentence_demographics_present %>% 
+               summarise(top_percentile = quantile(string_length, .99))
+```
+
+
+
+```{r}
 names_length_raw <- all_events_sentences %>% 
   left_join(names_demographic, by = "nid") %>%
   mutate(across(starts_with("all"), ~ . * string_length)) 
 ```
+
+```{r}
+#This calculated the percent of sentences in the top 1% and which characters were present
+
+top_names = all_events_sentences %>% 
+    filter(string_length>top_percent$top_percentile[1]) %>% 
+  left_join(names_demographic, by = "nid") %>% 
+  filter(presentmentioned=="Present") %>% 
+  select(starts_with("all_")) %>%
+  summarise(across(everything(), sum, na.rm = TRUE)) %>% 
+  pivot_longer(everything())  %>% 
+  mutate(percent=value/sum(value)) %>% 
+  filter(value>0)
+```
+
 
 ```{r names_length_present}
 names_length_present <- names_length_raw %>%
@@ -1345,3 +1369,92 @@ correlation_third_term <-
   filter(p_value < .5) %>%
   filter(cor > .2 | cor < -.2)
 ```
+
+
+## Reqiuem composition
+
+This data set was custom created for *Requiem for a Nun*. It looks at what characters appear in Faulkner's longest sentence. The reason for doing this manually is to verify that the correct events have been chosen.
+
+```{r}
+reqiuem_events <-  read_csv("processed_data/dy_database_flattened_2024_1_21.csv", show_col_types = FALSE) %>% 
+                  rename_with( ~ tolower(str_replace_all(.x,"\\s+|\\p{Punct}", "_"))) %>% 
+  filter(sourcetextcode == "RQ") %>% 
+  filter(pagenumber >168 &pagenumber <206) %>% 
+  select(
+    sourcetexttitle,
+    sourcetextcode,
+    pagenumber,
+    nid,
+    presentmentioned,
+    charactername,
+    race,
+    gender,
+    class,
+    rank,
+    individualgroup,
+    date,
+    location
+    ) %>%  
+  distinct(charactername, .keep_all = TRUE)
+```
+
+
+```{r}
+#wanted to see how many different locations, only 10. Not all that interesting
+reqiuem_events_location <- reqiuem_events %>% 
+                            distinct(location)
+```
+
+
+```{r}
+reqiuem_events_demographics <- reqiuem_events %>% 
+    mutate(race_class_gender = paste(race, class, gender, sep ="_")) %>%
+  mutate(race_class_gender = tolower(str_replace_all(race_class_gender, " ", "_"))) %>%
+  group_by(sourcetextcode, presentmentioned, nid) %>%
+  pivot_wider(
+    id_cols = c(sourcetextcode, presentmentioned, pagenumber, nid),
+    names_from = race_class_gender,
+    values_from = gender,
+    values_fn = list(gender = function(x) ifelse(length(x) > 0, 1, 0)),
+    names_prefix = "all_"
+  ) %>%
+  rename_with( ~ tolower(gsub(" ", "_", .x, fixed = TRUE))) %>%
+  ungroup()
+  
+```
+
+```{r}
+demographics_longest_sentence <- reqiuem_events_demographics %>% 
+                                 group_by(presentmentioned) %>% 
+                                  select(starts_with("all_")) %>%
+  summarise(across(everything(), sum, na.rm = TRUE)) %>% 
+                                pivot_longer(starts_with("all_")) %>% 
+                                  filter(value>0)
+
+```
+
+```{r}
+write_csv(demographics_longest_sentence, "processed_data/demographics_longest_sentence.csv")
+```
+
+
+
+```{r}
+longest_sentence_presentmentioned <- demographics_longest_sentence %>% 
+                                      group_by(presentmentioned) %>% 
+                                      summarise(sum(value))
+```
+
+
+```{r}
+longest_sentence_distinct <- demographics_longest_sentence %>% 
+                              distinct(name)
+```
+
+```{r}
+longest_sentence_composition <- demographics_longest_sentence %>% 
+                                group_by(presentmentioned) %>% 
+                                mutate(percent = value/sum(value))
+  
+```
+
